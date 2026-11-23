@@ -4,98 +4,95 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#000000" />
-  <title>AI Camera Pro</title>
+  <title>Hưng Vua A6 AI Camera</title>
   <style>
-    :root {
-      --bg: #000; --glass: rgba(18,18,22,.64); --panel: rgba(16,16,20,.88);
-      --border: rgba(255,255,255,.14); --text: #fafafa; --muted: #a1a1aa;
-      --green: #22c55e; --glow: rgba(34,197,94,.35); --amber: #f59e0b;
-      --top: env(safe-area-inset-top, 14px); --bot: env(safe-area-inset-bottom, 18px);
-    }
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
-    html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; overflow: hidden; touch-action: manipulation; }
-    .app, .stage { position: relative; width: 100%; height: 100%; background: #050507; overflow: hidden; }
-    #cameraVideo, #glCanvas, #overlayCanvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-    #cameraVideo { opacity: 0; pointer-events: none; z-index: 0; }
-    #cameraVideo.fallback { opacity: 1; }
-    #glCanvas { z-index: 1; pointer-events: none; }
-    #overlayCanvas { z-index: 2; pointer-events: none; }
-    #cameraVideo.mirrored, #glCanvas.mirrored, #overlayCanvas.mirrored { transform: scaleX(-1); }
-    .top-hud { position: absolute; top: 0; left: 0; right: 0; z-index: 10; padding: calc(var(--top) + 12px) 16px 24px; background: linear-gradient(to bottom, rgba(0,0,0,.75), rgba(0,0,0,.28) 65%, transparent); display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
-    .top-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; pointer-events: auto; }
-    .status-pill { display: inline-flex; align-items: center; gap: 8px; padding: 8px 13px; border-radius: 999px; background: var(--glass); backdrop-filter: blur(18px); border: 1px solid var(--border); font-size: 12px; font-weight: 600; transition: .25s ease; }
-    .status-pill.good { background: rgba(20,83,45,.74); border-color: rgba(74,222,128,.65); color: #dcfce7; box-shadow: 0 4px 20px var(--glow); }
-    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--amber); flex-shrink: 0; }
-    .status-pill.good .status-dot { background: #4ade80; box-shadow: 0 0 10px #4ade80; }
-    .status-pill.loading .status-dot { background: #60a5fa; animation: pulse 1.1s infinite; }
-    @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.75); } }
-    .top-controls, .telemetry-bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-    .ai-chip-btn { height: 34px; padding: 0 11px; border-radius: 999px; border: 1px solid var(--border); background: var(--glass); backdrop-filter: blur(18px); color: var(--muted); font-size: 11.5px; font-weight: 700; cursor: pointer; }
-    .ai-chip-btn.on { border-color: rgba(74,222,128,.5); background: rgba(20,83,45,.52); color: #bbf7d0; }
-    .ratio-switch { display: flex; padding: 3px; border-radius: 999px; background: var(--glass); backdrop-filter: blur(18px); border: 1px solid var(--border); }
-    .ratio-btn { border: none; background: transparent; color: rgba(255,255,255,.68); font-size: 11.5px; font-weight: 700; padding: 5px 11px; border-radius: 999px; cursor: pointer; }
-    .ratio-btn.active { background: #fff; color: #09090b; }
-    .tele-chip { padding: 3px 9px; border-radius: 6px; background: rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.08); font-size: 10.5px; font-weight: 600; color: rgba(255,255,255,.72); }
-    .color-drawer { position: absolute; left: 12px; right: 12px; bottom: calc(var(--bot) + 114px); z-index: 12; padding: 14px 14px 12px; border-radius: 22px; background: var(--panel); backdrop-filter: blur(22px); border: 1px solid var(--border); box-shadow: 0 18px 42px rgba(0,0,0,.65); display: none; flex-direction: column; gap: 12px; }
-    .color-drawer.open { display: flex; animation: slideUp .18s ease-out; }
-    @keyframes slideUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
-    .slider-row { display: flex; flex-direction: column; gap: 6px; }
-    .slider-head, .lut-header { display: flex; align-items: center; justify-content: space-between; font-size: 12px; font-weight: 600; }
-    .slider-label { color: rgba(255,255,255,.88); display: flex; align-items: center; gap: 6px; }
-    .slider-val { color: #fde68a; font-variant-numeric: tabular-nums; font-weight: 700; }
-    .mini-reset { border: 1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.08); color: #e4e4e7; font-size: 10.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; cursor: pointer; }
-    .range-track { -webkit-appearance: none; appearance: none; width: 100%; height: 8px; border-radius: 999px; outline: none; margin: 4px 0; }
-    .range-temp { background: linear-gradient(90deg, #3b82f6 0%, #e4e4e7 50%, #f59e0b 100%); }
-    .range-intensity { background: linear-gradient(90deg, #27272a 0%, #22c55e 100%); }
-    .range-track::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: #fff; border: 2px solid #09090b; box-shadow: 0 2px 8px rgba(0,0,0,.55); cursor: pointer; }
-    .add-lut-btn { border: 1px solid rgba(74,222,128,.45); background: rgba(20,83,45,.45); color: #bbf7d0; font-size: 11.5px; font-weight: 700; padding: 5px 11px; border-radius: 999px; cursor: pointer; }
-    .lut-strip { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
-    .lut-strip::-webkit-scrollbar { display: none; }
-    .lut-card { position: relative; flex: 0 0 auto; min-width: 78px; padding: 8px 10px; border-radius: 14px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); color: #d4d4d8; font-size: 11.5px; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; }
-    .lut-card.active { background: rgba(255,255,255,.16); border-color: #4ade80; color: #fff; box-shadow: 0 0 14px rgba(34,197,94,.25); }
-    .lut-swatch { width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,.35); }
-    .lut-name { max-width: 74px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .lut-del { position: absolute; top: 3px; right: 4px; width: 16px; height: 16px; border-radius: 50%; border: none; background: rgba(239,68,68,.85); color: #fff; font-size: 10px; font-weight: 800; line-height: 16px; padding: 0; cursor: pointer; }
-    .bottom-dock { position: absolute; bottom: 0; left: 0; right: 0; z-index: 10; padding: 24px 26px calc(var(--bot) + 18px); background: linear-gradient(to top, rgba(0,0,0,.92), rgba(0,0,0,.65) 60%, transparent); display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
-    .dock-btn { width: 52px; height: 52px; border-radius: 50%; border: 1px solid var(--border); background: var(--glass); backdrop-filter: blur(18px); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-    .dock-btn:active { transform: scale(.92); background: rgba(255,255,255,.18); }
-    .dock-btn.left { justify-self: start; }
-    .dock-btn.right { justify-self: end; width: auto; padding: 0 14px; border-radius: 999px; gap: 6px; font-size: 12.5px; font-weight: 700; }
-    .dock-btn.active-panel { border-color: #fde68a; background: rgba(245,158,11,.28); color: #fef3c7; }
-    .shutter-btn { width: 78px; height: 78px; border-radius: 50%; border: 3.5px solid rgba(255,255,255,.92); background: rgba(255,255,255,.08); padding: 5px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: .22s ease; box-shadow: 0 6px 24px rgba(0,0,0,.45); }
-    .shutter-core { width: 100%; height: 100%; border-radius: 50%; background: #fff; transition: .15s ease; }
-    .shutter-btn.ready { border-color: #4ade80; box-shadow: 0 0 24px var(--glow); }
-    .shutter-btn.ready .shutter-core { background: #22c55e; }
-    .shutter-btn:active .shutter-core { transform: scale(.86); }
-    .shutter-btn:disabled { opacity: .4; pointer-events: none; }
-    .modal-backdrop { position: fixed; inset: 0; z-index: 35; background: rgba(0,0,0,.72); backdrop-filter: blur(8px); display: none; align-items: flex-end; justify-content: center; padding: 16px 14px calc(var(--bot) + 14px); }
-    .modal-backdrop.open { display: flex; }
-    .source-sheet { width: 100%; max-width: 440px; border-radius: 22px; background: #141418; border: 1px solid var(--border); padding: 18px; display: flex; flex-direction: column; gap: 14px; }
-    .source-title { display: flex; align-items: center; justify-content: space-between; font-size: 16px; font-weight: 700; }
-    .close-x { width: 30px; height: 30px; border-radius: 50%; border: none; background: rgba(255,255,255,.1); color: #fff; font-size: 16px; cursor: pointer; }
-    .source-note { font-size: 12px; line-height: 1.45; color: var(--muted); background: rgba(34,197,94,.08); border: 1px solid rgba(74,222,128,.22); padding: 10px 12px; border-radius: 12px; }
-    .url-box { display: flex; gap: 8px; }
-    .url-input { flex: 1; min-height: 46px; border-radius: 12px; border: 1px solid rgba(255,255,255,.16); background: #09090b; color: #fff; padding: 0 12px; font-size: 13px; outline: none; user-select: text; }
-    .preview-modal { position: fixed; inset: 0; z-index: 30; background: #070709; display: none; flex-direction: column; padding: calc(var(--top) + 14px) 18px calc(var(--bot) + 20px); }
-    .preview-modal.open { display: flex; }
-    .preview-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-    .preview-title { font-size: 16px; font-weight: 700; }
-    .preview-sub { font-size: 12px; color: var(--muted); }
-    .preview-res-badge { font-size: 12px; font-weight: 700; color: #86efac; background: rgba(34,197,94,.16); border: 1px solid rgba(74,222,128,.35); padding: 5px 11px; border-radius: 999px; }
-    .preview-frame { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 18px; background: #0e0e12; border: 1px solid rgba(255,255,255,.1); }
-    .preview-frame img { max-width: 100%; max-height: 100%; object-fit: contain; }
-    .preview-actions { display: grid; grid-template-columns: 1fr 1.45fr; gap: 12px; margin-top: 16px; }
-    .action-btn { min-height: 50px; border-radius: 14px; border: 1px solid var(--border); font-size: 14px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
-    .btn-retake { background: #1e1e24; color: var(--text); }
-    .btn-save { background: linear-gradient(135deg, #22c55e, #16a34a); color: #032210; border-color: #4ade80; }
-    .error-sheet { position: absolute; inset: 0; z-index: 25; background: rgba(5,5,7,.94); display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 32px; gap: 14px; }
-    .error-sheet.show { display: flex; }
-    .error-sheet h2 { margin: 0; font-size: 19px; }
-    .error-sheet p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--muted); max-width: 320px; }
-    .toast-pill { position: fixed; top: calc(var(--top) + 64px); left: 50%; transform: translateX(-50%); z-index: 50; background: rgba(24,24,29,.94); border: 1px solid rgba(255,255,255,.18); color: #fff; font-size: 12.5px; font-weight: 600; padding: 9px 16px; border-radius: 999px; display: none; white-space: nowrap; }
-    .toast-pill.show { display: block; }
-    .flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 40; transition: opacity .16s ease; }
-    .flash.active { opacity: .72; transition: none; }
+    :root { --bg:#000; --glass:rgba(18,18,22,.64); --panel:rgba(16,16,20,.92); --border:rgba(255,255,255,.15); --text:#fafafa; --muted:#a1a1aa; --green:#22c55e; --glow:rgba(34,197,94,.35); --amber:#fbbf24; --top:env(safe-area-inset-top,14px); --bot:env(safe-area-inset-bottom,18px); }
+    * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; }
+    html,body { margin:0; padding:0; width:100%; height:100%; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; overflow:hidden; touch-action:none; }
+    .app,.stage { position:relative; width:100%; height:100%; background:#050507; overflow:hidden; }
+    #cameraVideo,#glCanvas,#overlayCanvas { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+    #cameraVideo { opacity:0; pointer-events:none; z-index:0; }
+    #cameraVideo.fallback { opacity:1; }
+    #glCanvas { z-index:1; pointer-events:none; }
+    #overlayCanvas { z-index:2; touch-action:none; }
+    #cameraVideo.mirrored,#glCanvas.mirrored,#overlayCanvas.mirrored { transform:scaleX(-1); }
+    .top-hud { position:absolute; top:0; left:0; right:0; z-index:10; padding:calc(var(--top) + 10px) 14px 20px; background:linear-gradient(to bottom,rgba(0,0,0,.78),rgba(0,0,0,.2) 70%,transparent); display:flex; flex-direction:column; gap:8px; pointer-events:none; }
+    .top-row,.top-controls,.telemetry-bar { display:flex; align-items:center; justify-content:space-between; gap:6px; flex-wrap:wrap; pointer-events:auto; }
+    .telemetry-bar { justify-content:flex-start; pointer-events:none; }
+    .status-pill { display:inline-flex; align-items:center; gap:7px; padding:7px 12px; border-radius:999px; background:var(--glass); backdrop-filter:blur(16px); border:1px solid var(--border); font-size:12px; font-weight:600; transition:.2s; }
+    .status-pill.good { background:rgba(20,83,45,.78); border-color:rgba(74,222,128,.7); color:#dcfce7; box-shadow:0 4px 18px var(--glow); }
+    .status-dot { width:7px; height:7px; border-radius:50%; background:var(--muted); flex-shrink:0; }
+    .status-pill.ai-wait .status-dot { background:var(--amber); }
+    .status-pill.good .status-dot { background:#4ade80; box-shadow:0 0 10px #4ade80; }
+    .status-pill.loading .status-dot { background:#60a5fa; animation:pulse 1s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.35;transform:scale(.75)} }
+    .chip-btn { height:32px; padding:0 11px; border-radius:999px; border:1px solid var(--border); background:var(--glass); backdrop-filter:blur(16px); color:var(--muted); font-size:11.5px; font-weight:700; cursor:pointer; }
+    .chip-btn.on { border-color:rgba(74,222,128,.55); background:rgba(20,83,45,.55); color:#bbf7d0; }
+    .chip-btn.rescan { border-color:rgba(251,191,36,.6); background:rgba(120,53,15,.55); color:#fde68a; display:none; }
+    .chip-btn.rescan.show { display:inline-flex; align-items:center; }
+    .ratio-switch { display:none; padding:2px; border-radius:999px; background:var(--glass); backdrop-filter:blur(16px); border:1px solid var(--border); }
+    .ratio-switch.show { display:flex; }
+    .ratio-btn { border:none; background:transparent; color:rgba(255,255,255,.68); font-size:11px; font-weight:700; padding:5px 10px; border-radius:999px; cursor:pointer; }
+    .ratio-btn.active { background:#fff; color:#09090b; }
+    .tele-chip { padding:3px 8px; border-radius:6px; background:rgba(0,0,0,.45); border:1px solid rgba(255,255,255,.08); font-size:10.5px; font-weight:600; color:rgba(255,255,255,.8); }
+    .zoom-bar { position:absolute; left:50%; transform:translateX(-50%); bottom:calc(var(--bot) + 106px); z-index:11; display:flex; align-items:center; gap:4px; padding:4px; border-radius:999px; background:var(--glass); backdrop-filter:blur(16px); border:1px solid var(--border); }
+    .zoom-pill { min-width:40px; height:30px; border-radius:999px; border:none; background:transparent; color:rgba(255,255,255,.78); font-size:11.5px; font-weight:700; cursor:pointer; transition:.15s; }
+    .zoom-pill.active { background:#fbbf24; color:#09090b; }
+    .color-drawer { position:absolute; left:12px; right:12px; bottom:calc(var(--bot) + 152px); z-index:12; padding:14px; border-radius:20px; background:var(--panel); backdrop-filter:blur(22px); border:1px solid var(--border); box-shadow:0 18px 42px rgba(0,0,0,.68); display:none; flex-direction:column; gap:11px; }
+    .color-drawer.open { display:flex; }
+    .slider-row { display:flex; flex-direction:column; gap:5px; }
+    .slider-head,.lut-header { display:flex; align-items:center; justify-content:space-between; font-size:12px; font-weight:600; }
+    .slider-val { color:#fde68a; font-variant-numeric:tabular-nums; font-weight:700; }
+    .mini-reset { border:1px solid rgba(255,255,255,.16); background:rgba(255,255,255,.08); color:#e4e4e7; font-size:10.5px; padding:2px 8px; border-radius:999px; cursor:pointer; margin-left:6px; }
+    .range-track { -webkit-appearance:none; appearance:none; width:100%; height:8px; border-radius:999px; outline:none; margin:4px 0; }
+    .range-temp { background:linear-gradient(90deg,#3b82f6 0%,#e4e4e7 50%,#f59e0b 100%); }
+    .range-intensity { background:linear-gradient(90deg,#27272a 0%,#22c55e 100%); }
+    .range-track::-webkit-slider-thumb { -webkit-appearance:none; width:22px; height:22px; border-radius:50%; background:#fff; border:2px solid #09090b; box-shadow:0 2px 8px rgba(0,0,0,.55); }
+    .add-lut-btn { border:1px solid rgba(74,222,128,.45); background:rgba(20,83,45,.45); color:#bbf7d0; font-size:11.5px; font-weight:700; padding:5px 11px; border-radius:999px; cursor:pointer; }
+    .lut-strip { display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; }
+    .lut-strip::-webkit-scrollbar { display:none; }
+    .lut-card { position:relative; flex:0 0 auto; min-width:74px; padding:8px; border-radius:14px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1); color:#d4d4d8; font-size:11px; font-weight:600; display:flex; flex-direction:column; align-items:center; gap:5px; cursor:pointer; }
+    .lut-card.active { background:rgba(255,255,255,.16); border-color:#4ade80; color:#fff; }
+    .lut-swatch { width:22px; height:22px; border-radius:50%; border:1.5px solid rgba(255,255,255,.35); }
+    .lut-name { max-width:70px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .lut-del { position:absolute; top:2px; right:3px; width:16px; height:16px; border-radius:50%; border:none; background:rgba(239,68,68,.9); color:#fff; font-size:10px; font-weight:800; line-height:16px; padding:0; }
+    .bottom-dock { position:absolute; bottom:0; left:0; right:0; z-index:10; padding:20px 24px calc(var(--bot) + 16px); background:linear-gradient(to top,rgba(0,0,0,.92),rgba(0,0,0,.65) 60%,transparent); display:grid; grid-template-columns:1fr auto 1fr; align-items:center; }
+    .dock-btn { width:50px; height:50px; border-radius:50%; border:1px solid var(--border); background:var(--glass); backdrop-filter:blur(16px); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+    .dock-btn.left { justify-self:start; }
+    .dock-btn.right { justify-self:end; width:auto; padding:0 14px; border-radius:999px; gap:6px; font-size:12px; font-weight:700; }
+    .dock-btn.active-panel { border-color:#fde68a; background:rgba(245,158,11,.28); color:#fef3c7; }
+    .shutter-btn { width:76px; height:76px; border-radius:50%; border:3.5px solid rgba(255,255,255,.92); background:rgba(255,255,255,.08); padding:5px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:.2s; }
+    .shutter-core { width:100%; height:100%; border-radius:50%; background:#fff; transition:.14s; }
+    .shutter-btn.ready { border-color:#4ade80; box-shadow:0 0 22px var(--glow); }
+    .shutter-btn.ready .shutter-core { background:#22c55e; }
+    .shutter-btn:active .shutter-core { transform:scale(.86); }
+    .shutter-btn:disabled { opacity:.4; pointer-events:none; }
+    .modal-backdrop { position:fixed; inset:0; z-index:35; background:rgba(0,0,0,.72); backdrop-filter:blur(8px); display:none; align-items:flex-end; justify-content:center; padding:16px 14px calc(var(--bot) + 14px); }
+    .modal-backdrop.open { display:flex; }
+    .source-sheet { width:100%; max-width:440px; border-radius:22px; background:#141418; border:1px solid var(--border); padding:18px; display:flex; flex-direction:column; gap:12px; }
+    .source-title { display:flex; align-items:center; justify-content:space-between; font-size:16px; font-weight:700; }
+    .close-x { width:30px; height:30px; border-radius:50%; border:none; background:rgba(255,255,255,.1); color:#fff; font-size:16px; }
+    .source-note { font-size:12px; line-height:1.45; color:var(--muted); background:rgba(34,197,94,.08); border:1px solid rgba(74,222,128,.22); padding:10px 12px; border-radius:12px; }
+    .url-box { display:flex; gap:8px; }
+    .url-input { flex:1; min-height:46px; border-radius:12px; border:1px solid rgba(255,255,255,.16); background:#09090b; color:#fff; padding:0 12px; font-size:13px; outline:none; user-select:text; }
+    .preview-modal { position:fixed; inset:0; z-index:30; background:#070709; display:none; flex-direction:column; padding:calc(var(--top) + 14px) 18px calc(var(--bot) + 20px); }
+    .preview-modal.open { display:flex; }
+    .preview-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+    .preview-title { font-size:16px; font-weight:700; }
+    .preview-sub { font-size:12px; color:var(--muted); }
+    .preview-res-badge { font-size:12px; font-weight:700; color:#86efac; background:rgba(34,197,94,.16); border:1px solid rgba(74,222,128,.35); padding:5px 11px; border-radius:999px; }
+    .preview-frame { flex:1; display:flex; align-items:center; justify-content:center; overflow:hidden; border-radius:18px; background:#0e0e12; border:1px solid rgba(255,255,255,.1); }
+    .preview-frame img { max-width:100%; max-height:100%; object-fit:contain; }
+    .preview-actions { display:grid; grid-template-columns:1fr 1.45fr; gap:12px; margin-top:16px; }
+    .action-btn { min-height:50px; border-radius:14px; border:1px solid var(--border); font-size:14px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:8px; }
+    .btn-retake { background:#1e1e24; color:var(--text); }
+    .btn-save { background:linear-gradient(135deg,#22c55e,#16a34a); color:#032210; border-color:#4ade80; }
+    .error-sheet { position:absolute; inset:0; z-index:25; background:rgba(5,5,7,.94); display:none; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px; gap:14px; }
+    .error-sheet.show { display:flex; }
+    .toast-pill { position:fixed; top:calc(var(--top) + 64px); left:50%; transform:translateX(-50%); z-index:50; background:rgba(24,24,29,.94); border:1px solid rgba(255,255,255,.18); color:#fff; font-size:12.5px; font-weight:600; padding:9px 16px; border-radius:999px; display:none; white-space:nowrap; }
+    .toast-pill.show { display:block; }
+    .flash { position:fixed; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:40; transition:opacity .16s ease; }
+    .flash.active { opacity:.72; transition:none; }
   </style>
 </head>
 <body>
@@ -106,10 +103,11 @@
       <canvas id="overlayCanvas"></canvas>
       <div class="top-hud">
         <div class="top-row">
-          <div class="status-pill loading" id="statusBadge"><span class="status-dot"></span><span id="statusText">Đang khởi động AI...</span></div>
+          <div class="status-pill" id="statusBadge"><span class="status-dot"></span><span id="statusText">Chụp thường</span></div>
           <div class="top-controls">
-            <button class="ai-chip-btn on" id="toggleAiBtn"><span id="aiLabel">AI Bật</span></button>
-            <div class="ratio-switch">
+            <button class="chip-btn rescan" id="rescanBtn">Quét lại</button>
+            <button class="chip-btn" id="toggleAiBtn">AI: Tắt</button>
+            <div class="ratio-switch" id="ratioSwitch">
               <button class="ratio-btn active" data-ratio="0.8">4:5</button>
               <button class="ratio-btn" data-ratio="0.75">3:4</button>
             </div>
@@ -117,20 +115,24 @@
         </div>
         <div class="telemetry-bar">
           <span class="tele-chip" id="metaInfo">CAMERA • ĐANG MỞ...</span>
+          <span class="tele-chip" id="zoomInfo">1.0×</span>
           <span class="tele-chip" id="colorInfo">Gốc • 5500K</span>
         </div>
       </div>
 
+      <div class="zoom-bar" id="zoomBar">
+        <button class="zoom-pill active" data-z="1">1×</button>
+        <button class="zoom-pill" data-z="2">2×</button>
+        <button class="zoom-pill" data-z="3">3×</button>
+      </div>
+
       <div class="color-drawer" id="colorDrawer">
         <div class="slider-row">
-          <div class="slider-head">
-            <span class="slider-label">Nhiệt độ màu <button class="mini-reset" id="resetTempBtn">5500K</button></span>
-            <span class="slider-val" id="tempVal">5500K • Chuẩn</span>
-          </div>
+          <div class="slider-head"><span>Nhiệt độ màu<button class="mini-reset" id="resetTempBtn">5500K</button></span><span class="slider-val" id="tempVal">5500K • Chuẩn</span></div>
           <input type="range" class="range-track range-temp" id="tempSlider" min="2500" max="8500" step="100" value="5500" />
         </div>
         <div class="slider-row" id="intensityRow" style="display:none;">
-          <div class="slider-head"><span class="slider-label">Cường độ LUT</span><span class="slider-val" id="intensityVal" style="color:#86efac;">85%</span></div>
+          <div class="slider-head"><span>Cường độ LUT</span><span class="slider-val" id="intensityVal" style="color:#86efac;">85%</span></div>
           <input type="range" class="range-track range-intensity" id="intensitySlider" min="0" max="100" step="5" value="85" />
         </div>
         <div class="lut-header"><span>Bộ màu 3D LUT</span><button class="add-lut-btn" id="openSourceBtn">+ Thêm LUT</button></div>
@@ -138,481 +140,569 @@
       </div>
 
       <div class="error-sheet" id="errorOverlay">
-        <h2>Không thể mở Camera</h2>
-        <p id="errorDesc">Vui lòng cấp quyền Camera trong cài đặt ứng dụng.</p>
+        <h2>Không thể mở Camera</h2><p id="errorDesc">Vui lòng cấp quyền Camera.</p>
         <button class="action-btn btn-save" id="retryBtn" style="padding:0 28px;">Thử lại</button>
       </div>
 
       <div class="bottom-dock">
         <button class="dock-btn left" id="switchCamBtn" aria-label="Đổi camera">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
         </button>
-        <button class="shutter-btn" id="shutterBtn" aria-label="Chụp ảnh" disabled><span class="shutter-core"></span></button>
-        <button class="dock-btn right" id="toggleColorBtn">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
-          <span>Màu / LUT</span>
-        </button>
+        <button class="shutter-btn" id="shutterBtn" disabled><span class="shutter-core"></span></button>
+        <button class="dock-btn right" id="toggleColorBtn">Màu / LUT</button>
       </div>
     </div>
   </div>
 
   <div class="modal-backdrop" id="sourceModal">
     <div class="source-sheet">
-      <div class="source-title"><span>Nạp LUT từ nguồn an toàn</span><button class="close-x" id="closeSourceBtn">✕</button></div>
-      <div class="source-note">Chỉ đọc file văn bản chuẩn <b>.cube</b> (3D/1D LUT), giới hạn dưới 5MB, kiểm tra an toàn và lưu offline vào máy.</div>
+      <div class="source-title"><span>Nạp LUT an toàn (.cube)</span><button class="close-x" id="closeSourceBtn">✕</button></div>
+      <div class="source-note">Chỉ đọc file văn bản <b>.cube</b> dưới 5MB, lưu offline vào máy.</div>
       <input type="file" id="lutFileInput" accept=".cube,.txt" style="display:none;" />
       <button class="action-btn btn-save" id="pickFileBtn">Chọn file .cube từ điện thoại</button>
-      <div class="url-box">
-        <input type="url" class="url-input" id="lutUrlInput" placeholder="Hoặc dán link https://.../film.cube" />
-        <button class="action-btn btn-retake" id="loadUrlBtn" style="padding:0 16px;">Tải</button>
-      </div>
+      <div class="url-box"><input type="url" class="url-input" id="lutUrlInput" placeholder="Hoặc dán link https://.../film.cube" /><button class="action-btn btn-retake" id="loadUrlBtn" style="padding:0 16px;">Tải</button></div>
     </div>
   </div>
 
   <div class="preview-modal" id="previewModal">
-    <div class="preview-top">
-      <div><div class="preview-title">Bố cục hoàn tất</div><div class="preview-sub" id="previewSub">Độ phân giải gốc</div></div>
-      <div class="preview-res-badge" id="previewRes">0 × 0 px</div>
-    </div>
-    <div class="preview-frame"><img id="previewImg" alt="Ảnh đã chụp" /></div>
-    <div class="preview-actions">
-      <button class="action-btn btn-retake" id="retakeBtn">Chụp lại</button>
-      <button class="action-btn btn-save" id="downloadBtn">Tải ảnh về</button>
-    </div>
+    <div class="preview-top"><div><div class="preview-title">Ảnh đã chụp</div><div class="preview-sub" id="previewSub">Độ phân giải gốc</div></div><div class="preview-res-badge" id="previewRes">0 × 0 px</div></div>
+    <div class="preview-frame"><img id="previewImg" alt="Ảnh" /></div>
+    <div class="preview-actions"><button class="action-btn btn-retake" id="retakeBtn">Chụp lại</button><button class="action-btn btn-save" id="downloadBtn">Tải ảnh về</button></div>
   </div>
-
-  <div class="toast-pill" id="toastEl"></div>
-  <div class="flash" id="flashEl"></div>
+  <div class="toast-pill" id="toastEl"></div><div class="flash" id="flashEl"></div>
 
   <script type="module">
     import { FilesetResolver, ObjectDetector } from "./mediapipe/vision_bundle.mjs";
-
     const $ = (id) => document.getElementById(id);
     const video = $("cameraVideo"), glCanvas = $("glCanvas"), overlayCanvas = $("overlayCanvas"), ctx = overlayCanvas.getContext("2d"), stage = $("stage");
-    const statusBadge = $("statusBadge"), statusText = $("statusText"), metaInfo = $("metaInfo"), colorInfo = $("colorInfo");
-    const shutterBtn = $("shutterBtn"), switchCamBtn = $("switchCamBtn"), toggleAiBtn = $("toggleAiBtn"), aiLabel = $("aiLabel");
-    const ratioBtns = document.querySelectorAll(".ratio-btn"), toggleColorBtn = $("toggleColorBtn"), colorDrawer = $("colorDrawer");
+    const statusBadge = $("statusBadge"), statusText = $("statusText"), metaInfo = $("metaInfo"), zoomInfo = $("zoomInfo"), colorInfo = $("colorInfo");
+    const shutterBtn = $("shutterBtn"), switchCamBtn = $("switchCamBtn"), toggleAiBtn = $("toggleAiBtn"), rescanBtn = $("rescanBtn"), ratioSwitch = $("ratioSwitch");
+    const ratioBtns = document.querySelectorAll(".ratio-btn"), zoomPills = document.querySelectorAll(".zoom-pill"), toggleColorBtn = $("toggleColorBtn"), colorDrawer = $("colorDrawer");
     const tempSlider = $("tempSlider"), tempVal = $("tempVal"), resetTempBtn = $("resetTempBtn"), intensityRow = $("intensityRow"), intensitySlider = $("intensitySlider"), intensityVal = $("intensityVal"), lutStrip = $("lutStrip");
     const openSourceBtn = $("openSourceBtn"), sourceModal = $("sourceModal"), closeSourceBtn = $("closeSourceBtn"), pickFileBtn = $("pickFileBtn"), lutFileInput = $("lutFileInput"), lutUrlInput = $("lutUrlInput"), loadUrlBtn = $("loadUrlBtn");
-    const errorOverlay = $("errorOverlay"), errorDesc = $("errorDesc"), retryBtn = $("retryBtn");
-    const previewModal = $("previewModal"), previewImg = $("previewImg"), previewRes = $("previewRes"), previewSub = $("previewSub"), retakeBtn = $("retakeBtn"), downloadBtn = $("downloadBtn"), toastEl = $("toastEl"), flashEl = $("flashEl");
+    const errorOverlay = $("errorOverlay"), errorDesc = $("errorDesc"), retryBtn = $("retryBtn"), previewModal = $("previewModal"), previewImg = $("previewImg"), previewRes = $("previewRes"), previewSub = $("previewSub"), retakeBtn = $("retakeBtn"), downloadBtn = $("downloadBtn"), toastEl = $("toastEl"), flashEl = $("flashEl");
 
     const aiCanvas = document.createElement("canvas"), aiCtx = aiCanvas.getContext("2d");
-    let objectDetector = null, currentStream = null, facingMode = "environment", targetRatio = 0.8, aiEnabled = true;
-    let rafId = null, aiTimerId = null, isInferring = false, lastInferTs = 0, smoothedCrop = null, latestDetections = [];
+    const IGNORE_BG = new Set(["chair","couch","bed","dining table","tv","refrigerator","toilet","sink","bench"]);
+    let objectDetector = null, aiLoading = false, currentStream = null, videoTrack = null, camCaps = {};
+    let facingMode = "environment", targetRatio = 0.8, aiEnabled = false;
+    // Trạng thái AI: "off" | "scanning" | "guiding" | "ready"
+    let aiPhase = "off", scanStartTs = 0, scanSamples = [], lockedTrack = null, alignStartTs = 0, bestAnchor = { x: 0.36, y: 0.34 };
+    let rafId = null, aiTimerId = null, isInferring = false, lastInferTs = 0, smoothedCrop = null, focusRing = null;
+    let userZoom = 1.0, activeZoom = 1.0, hwZoom = 1.0, lastHwApply = 0, camCX = 0, camCY = 0, camReady = false;
     let capturedDataUrl = null, capturedBlob = null, kelvin = 5500, lutIntensity = 0.85, activeLutId = "none", lutList = [];
 
-    const LABEL_VI = { person: "Người", cat: "Mèo", dog: "Chó", bird: "Chim", car: "Ô tô", motorcycle: "Xe máy", bicycle: "Xe đạp", bottle: "Chai", cup: "Ly / Cốc", chair: "Ghế", potted_plant: "Chậu cây", cell_phone: "Điện thoại", laptop: "Laptop", book: "Sách" };
-    const showToast = (msg) => { toastEl.textContent = msg; toastEl.classList.add("show"); clearTimeout(showToast._t); showToast._t = setTimeout(() => toastEl.classList.remove("show"), 2600); };
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+    const showToast = (msg) => { toastEl.textContent = msg; toastEl.classList.add("show"); clearTimeout(showToast._t); showToast._t = setTimeout(() => toastEl.classList.remove("show"), 2300); };
 
     function getTempGains(k) {
-      const t = Math.max(-1, Math.min(1, (k - 5500) / 3000));
-      let r = 1, g = 1, b = 1;
-      if (t >= 0) { r = 1 + 0.28 * t; g = 1 + 0.04 * t; b = 1 - 0.28 * t; }
-      else { const c = -t; r = 1 - 0.24 * c; g = 1 - 0.02 * c; b = 1 + 0.30 * c; }
-      const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-      return [r / lum, g / lum, b / lum];
+      const t = clamp((k - 5500) / 3000, -1, 1);
+      const r = t >= 0 ? 1 + .28*t : 1 + .24*t, g = t >= 0 ? 1 + .04*t : 1 + .02*t, b = t >= 0 ? 1 - .28*t : 1 - .30*t;
+      const lum = .2126*r + .7152*g + .0722*b; return [r/lum, g/lum, b/lum];
     }
-
+    const sCurve = (v, s) => clamp(v + s*(v-.5)*(.25-(v-.5)**2), 0, 1);
     function buildLUT(size, fn) {
-      const data = new Uint8Array(size * size * size * 4); let p = 0;
-      for (let b = 0; b < size; b++) for (let g = 0; g < size; g++) for (let r = 0; r < size; r++) {
-        const [or, og, ob] = fn(r / (size - 1), g / (size - 1), b / (size - 1));
-        data[p++] = Math.max(0, Math.min(255, Math.round(or * 255)));
-        data[p++] = Math.max(0, Math.min(255, Math.round(og * 255)));
-        data[p++] = Math.max(0, Math.min(255, Math.round(ob * 255)));
-        data[p++] = 255;
+      const data = new Uint8Array(size**3*4); let p = 0;
+      for (let b=0;b<size;b++) for (let g=0;g<size;g++) for (let r=0;r<size;r++) {
+        const [or,og,ob] = fn(r/(size-1),g/(size-1),b/(size-1));
+        data[p++]=Math.round(clamp(or,0,1)*255); data[p++]=Math.round(clamp(og,0,1)*255); data[p++]=Math.round(clamp(ob,0,1)*255); data[p++]=255;
       }
       return { size, data };
     }
-
-    const sCurve = (v, s) => Math.max(0, Math.min(1, v + s * (v - 0.5) * (0.25 - (v - 0.5) ** 2)));
-
     function createBuiltinLuts() {
       const N = 17;
       return [
-        { id: "none", name: "Gốc", swatch: "linear-gradient(135deg,#e4e4e7,#52525b)", custom: false, size: 2, data: null },
-        { id: "fuji", name: "Fuji Pro", swatch: "linear-gradient(135deg,#34d399,#0f766e)", custom: false, ...buildLUT(N, (r, g, b) => { r = sCurve(r, .55); g = sCurve(g, .6); b = sCurve(b, .5); const l = .299*r + .587*g + .114*b, sh = (1 - l) ** 2; return [(l + (r-l)*.92)*.96 + .02, (l + (g-l)*1.04)*.98 + .03*sh + .015, (l + (b-l)*.96)*.97 + .04*sh + .02]; }) },
-        { id: "kodak", name: "Kodak Gold", swatch: "linear-gradient(135deg,#fbbf24,#b45309)", custom: false, ...buildLUT(N, (r, g, b) => { r = sCurve(r, .65); g = sCurve(g, .58); b = sCurve(b, .45); const l = .299*r + .587*g + .114*b; return [(l + (r-l)*1.12)*1.03 + .025, (l + (g-l)*1.04) + .015, (l + (b-l)*.88)*.89 + .01]; }) },
-        { id: "teal", name: "Cine Teal", swatch: "linear-gradient(135deg,#06b6d4,#f97316)", custom: false, ...buildLUT(N, (r, g, b) => { r = sCurve(r, .8); g = sCurve(g, .72); b = sCurve(b, .75); const l = .299*r + .587*g + .114*b, sh = (1 - l) ** 1.6, hi = l ** 1.5; return [r*.96 - .06*sh + .09*hi, g*.98 + .04*sh + .02*hi, b*.98 + .1*sh - .08*hi]; }) },
-        { id: "leica", name: "Leica B&W", swatch: "linear-gradient(135deg,#fff,#18181b)", custom: false, ...buildLUT(N, (r, g, b) => { const m = sCurve(.26*r + .62*g + .12*b, 1.15); return [m, m, m]; }) },
-        { id: "moody", name: "Moody Film", swatch: "linear-gradient(135deg,#64748b,#0f172a)", custom: false, ...buildLUT(N, (r, g, b) => { r = sCurve(r, .45); g = sCurve(g, .45); b = sCurve(b, .5); const l = .299*r + .587*g + .114*b; return [(l + (r-l)*.72)*.9 + .035, (l + (g-l)*.76)*.91 + .038, (l + (b-l)*.82)*.94 + .045]; }) }
+        { id:"none", name:"Gốc", swatch:"linear-gradient(135deg,#e4e4e7,#52525b)", custom:false, size:2, data:null },
+        { id:"fuji", name:"Fuji Pro", swatch:"linear-gradient(135deg,#34d399,#0f766e)", custom:false, ...buildLUT(N,(r,g,b)=>{ r=sCurve(r,.55);g=sCurve(g,.6);b=sCurve(b,.5); const l=.299*r+.587*g+.114*b,sh=(1-l)**2; return [(l+(r-l)*.92)*.96+.02,(l+(g-l)*1.04)*.98+.03*sh+.015,(l+(b-l)*.96)*.97+.04*sh+.02]; }) },
+        { id:"kodak", name:"Kodak Gold", swatch:"linear-gradient(135deg,#fbbf24,#b45309)", custom:false, ...buildLUT(N,(r,g,b)=>{ r=sCurve(r,.65);g=sCurve(g,.58);b=sCurve(b,.45); const l=.299*r+.587*g+.114*b; return [(l+(r-l)*1.12)*1.03+.025,l+(g-l)*1.04+.015,(l+(b-l)*.88)*.89+.01]; }) },
+        { id:"teal", name:"Cine Teal", swatch:"linear-gradient(135deg,#06b6d4,#f97316)", custom:false, ...buildLUT(N,(r,g,b)=>{ r=sCurve(r,.8);g=sCurve(g,.72);b=sCurve(b,.75); const l=.299*r+.587*g+.114*b,sh=(1-l)**1.6,hi=l**1.5; return [r*.96-.06*sh+.09*hi,g*.98+.04*sh+.02*hi,b*.98+.1*sh-.08*hi]; }) },
+        { id:"leica", name:"Leica B&W", swatch:"linear-gradient(135deg,#fff,#18181b)", custom:false, ...buildLUT(N,(r,g,b)=>{ const m=sCurve(.26*r+.62*g+.12*b,1.15); return [m,m,m]; }) },
+        { id:"moody", name:"Moody Film", swatch:"linear-gradient(135deg,#64748b,#0f172a)", custom:false, ...buildLUT(N,(r,g,b)=>{ r=sCurve(r,.45);g=sCurve(g,.45);b=sCurve(b,.5); const l=.299*r+.587*g+.114*b; return [(l+(r-l)*.72)*.9+.035,(l+(g-l)*.76)*.91+.038,(l+(b-l)*.82)*.94+.045]; }) }
       ];
     }
 
     function parseCubeFile(text, fallbackName) {
-      if (typeof text !== "string" || text.length > 6 * 1024 * 1024) throw new Error("File quá lớn (tối đa 5MB)");
-      if (text.includes("<html") || text.includes("<script")) throw new Error("Không phải file LUT .cube hợp lệ");
-      let title = fallbackName.replace(/\.(cube|txt)$/i, "").slice(0, 22) || "LUT Tùy chỉnh", size3D = 0, size1D = 0, dMin = [0,0,0], dMax = [1,1,1];
-      const raw = [];
-      for (const rawLine of text.split(/\r?\n/)) {
-        const line = rawLine.trim();
-        if (!line || line.startsWith("#")) continue;
-        if (line.startsWith("TITLE")) { const m = line.match(/TITLE\s+"?([^"]+)"?/i); if (m?.[1]) title = m[1].trim().slice(0, 22); continue; }
-        if (line.startsWith("LUT_3D_SIZE")) { size3D = parseInt(line.split(/\s+/)[1], 10); continue; }
-        if (line.startsWith("LUT_1D_SIZE")) { size1D = parseInt(line.split(/\s+/)[1], 10); continue; }
-        if (line.startsWith("DOMAIN_MIN")) { const p = line.split(/\s+/).slice(1).map(Number); if (p.length === 3 && p.every(Number.isFinite)) dMin = p; continue; }
-        if (line.startsWith("DOMAIN_MAX")) { const p = line.split(/\s+/).slice(1).map(Number); if (p.length === 3 && p.every(Number.isFinite)) dMax = p; continue; }
-        if (/^[A-Za-z_]/.test(line)) continue;
-        const parts = line.split(/\s+/);
-        if (parts.length >= 3) {
-          const r = Number(parts[0]), g = Number(parts[1]), b = Number(parts[2]);
-          if (Number.isFinite(r) && Number.isFinite(g) && Number.isFinite(b)) raw.push(r, g, b);
+      if (typeof text!=="string" || text.length>6e6 || text.includes("<html") || text.includes("<script")) throw new Error("File .cube không hợp lệ");
+      let title = fallbackName.replace(/\.(cube|txt)$/i,"").slice(0,22) || "LUT", size3D=0, size1D=0, dMin=[0,0,0], dMax=[1,1,1], raw=[];
+      for (const rl of text.split(/\r?\n/)) {
+        const l = rl.trim(); if (!l || l.startsWith("#")) continue;
+        if (l.startsWith("TITLE")) { const m=l.match(/TITLE\s+"?([^"]+)"?/i); if(m?.[1]) title=m[1].trim().slice(0,22); continue; }
+        if (l.startsWith("LUT_3D_SIZE")) { size3D=parseInt(l.split(/\s+/)[1],10); continue; }
+        if (l.startsWith("LUT_1D_SIZE")) { size1D=parseInt(l.split(/\s+/)[1],10); continue; }
+        if (l.startsWith("DOMAIN_MIN")) { const p=l.split(/\s+/).slice(1).map(Number); if(p.length===3&&p.every(Number.isFinite)) dMin=p; continue; }
+        if (l.startsWith("DOMAIN_MAX")) { const p=l.split(/\s+/).slice(1).map(Number); if(p.length===3&&p.every(Number.isFinite)) dMax=p; continue; }
+        if (/^[A-Za-z_]/.test(l)) continue;
+        const p=l.split(/\s+/); if(p.length>=3){ const r=+p[0],g=+p[1],b=+p[2]; if(Number.isFinite(r)&&Number.isFinite(g)&&Number.isFinite(b)) raw.push(r,g,b); }
+      }
+      const norm = (v,i) => clamp((v-dMin[i])/(dMax[i]-dMin[i]||1),0,1);
+      if (size1D>=2 && size1D<=4096 && raw.length>=size1D*3 && size3D===0) {
+        const s1=(u,ch)=>{const pos=u*(size1D-1),i0=Math.floor(pos),i1=Math.min(size1D-1,i0+1),f=pos-i0;return norm(raw[i0*3+ch],ch)*(1-f)+norm(raw[i1*3+ch],ch)*f;};
+        return { name:title, ...buildLUT(17,(r,g,b)=>[s1(r,0),s1(g,1),s1(b,2)]) };
+      }
+      if (size3D<2 || size3D>65 || raw.length<size3D**3*3) throw new Error("Cấu trúc .cube sai");
+      const tS = size3D>33 ? 33 : size3D, packed = new Uint8Array(tS**3*4); let p=0;
+      for (let b=0;b<tS;b++) for (let g=0;g<tS;g++) for (let r=0;r<tS;r++) {
+        const x=(r/(tS-1))*(size3D-1), y=(g/(tS-1))*(size3D-1), z=(b/(tS-1))*(size3D-1);
+        const x0=Math.floor(x),x1=Math.min(size3D-1,x0+1),fx=x-x0, y0=Math.floor(y),y1=Math.min(size3D-1,y0+1),fy=y-y0, z0=Math.floor(z),z1=Math.min(size3D-1,z0+1),fz=z-z0;
+        const idx=(rx,gy,bz)=>(rx+size3D*(gy+size3D*bz))*3;
+        for(let c=0;c<3;c++){
+          const c00=raw[idx(x0,y0,z0)+c]*(1-fx)+raw[idx(x1,y0,z0)+c]*fx, c10=raw[idx(x0,y1,z0)+c]*(1-fx)+raw[idx(x1,y1,z0)+c]*fx;
+          const c01=raw[idx(x0,y0,z1)+c]*(1-fx)+raw[idx(x1,y0,z1)+c]*fx, c11=raw[idx(x0,y1,z1)+c]*(1-fx)+raw[idx(x1,y1,z1)+c]*fx;
+          packed[p++]=Math.round(norm((c00*(1-fy)+c10*fy)*(1-fz)+(c01*(1-fy)+c11*fy)*fz,c)*255);
         }
+        packed[p++]=255;
       }
-      const norm = (v, i) => Math.max(0, Math.min(1, (v - dMin[i]) / (dMax[i] - dMin[i] || 1)));
-      if (size1D >= 2 && size1D <= 4096 && raw.length >= size1D * 3 && size3D === 0) {
-        const s1 = (u, ch) => { const pos = u * (size1D - 1), i0 = Math.floor(pos), i1 = Math.min(size1D - 1, i0 + 1), f = pos - i0; return norm(raw[i0*3+ch], ch)*(1-f) + norm(raw[i1*3+ch], ch)*f; };
-        return { name: title, ...buildLUT(17, (r, g, b) => [s1(r, 0), s1(g, 1), s1(b, 2)]) };
-      }
-      if (size3D < 2 || size3D > 65 || raw.length < size3D ** 3 * 3) throw new Error("File .cube không đúng chuẩn LUT 3D");
-      const targetSize = size3D > 33 ? 33 : size3D, packed = new Uint8Array(targetSize ** 3 * 4);
-      const s3 = (fr, fg, fb) => {
-        const x = fr*(size3D-1), y = fg*(size3D-1), z = fb*(size3D-1);
-        const x0 = Math.floor(x), x1 = Math.min(size3D-1, x0+1), fx = x-x0;
-        const y0 = Math.floor(y), y1 = Math.min(size3D-1, y0+1), fy = y-y0;
-        const z0 = Math.floor(z), z1 = Math.min(size3D-1, z0+1), fz = z-z0;
-        const idx = (rx, gy, bz) => (rx + size3D*(gy + size3D*bz))*3, out = [0,0,0];
-        for (let c = 0; c < 3; c++) {
-          const c00 = raw[idx(x0,y0,z0)+c]*(1-fx) + raw[idx(x1,y0,z0)+c]*fx, c10 = raw[idx(x0,y1,z0)+c]*(1-fx) + raw[idx(x1,y1,z0)+c]*fx;
-          const c01 = raw[idx(x0,y0,z1)+c]*(1-fx) + raw[idx(x1,y0,z1)+c]*fx, c11 = raw[idx(x0,y1,z1)+c]*(1-fx) + raw[idx(x1,y1,z1)+c]*fx;
-          out[c] = norm((c00*(1-fy)+c10*fy)*(1-fz) + (c01*(1-fy)+c11*fy)*fz, c);
-        }
-        return out;
-      };
-      let p = 0;
-      for (let b = 0; b < targetSize; b++) for (let g = 0; g < targetSize; g++) for (let r = 0; r < targetSize; r++) {
-        const [cr, cg, cb] = targetSize === size3D
-          ? [norm(raw[(r+size3D*(g+size3D*b))*3], 0), norm(raw[(r+size3D*(g+size3D*b))*3+1], 1), norm(raw[(r+size3D*(g+size3D*b))*3+2], 2)]
-          : s3(r/(targetSize-1), g/(targetSize-1), b/(targetSize-1));
-        packed[p++] = Math.round(cr*255); packed[p++] = Math.round(cg*255); packed[p++] = Math.round(cb*255); packed[p++] = 255;
-      }
-      return { name: title, size: targetSize, data: packed };
+      return { name:title, size:tS, data:packed };
     }
 
-    const openLutDB = () => new Promise((res, rej) => { const q = indexedDB.open("AICamLutDB", 1); q.onupgradeneeded = () => { if (!q.result.objectStoreNames.contains("luts")) q.result.createObjectStore("luts", { keyPath: "id" }); }; q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); });
-    async function loadCustomLuts() { try { const db = await openLutDB(); return await new Promise((res) => { const q = db.transaction("luts", "readonly").objectStore("luts").getAll(); q.onsuccess = () => res((q.result || []).map((i) => ({ ...i, data: new Uint8Array(i.data) }))); q.onerror = () => res([]); }); } catch { return []; } }
-    async function saveCustomLut(l) { try { const db = await openLutDB(); db.transaction("luts", "readwrite").objectStore("luts").put({ id: l.id, name: l.name, swatch: l.swatch, custom: true, size: l.size, data: Array.from(l.data) }); } catch {} }
-    async function deleteCustomLut(id) { try { const db = await openLutDB(); db.transaction("luts", "readwrite").objectStore("luts").delete(id); } catch {} }
+    const openDB = () => new Promise((res,rej)=>{ const q=indexedDB.open("AICamLutDB",1); q.onupgradeneeded=()=>{ if(!q.result.objectStoreNames.contains("luts")) q.result.createObjectStore("luts",{keyPath:"id"}); }; q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error); });
+    const loadCustomLuts = async () => { try { const db=await openDB(); return await new Promise(r=>{ const q=db.transaction("luts","readonly").objectStore("luts").getAll(); q.onsuccess=()=>r((q.result||[]).map(i=>({...i,data:new Uint8Array(i.data)}))); q.onerror=()=>r([]); }); } catch{return [];} };
+    const saveCustomLut = async (l) => { try { const db=await openDB(); db.transaction("luts","readwrite").objectStore("luts").put({id:l.id,name:l.name,swatch:l.swatch,custom:true,size:l.size,data:Array.from(l.data)}); } catch{} };
+    const deleteCustomLut = async (id) => { try { const db=await openDB(); db.transaction("luts","readwrite").objectStore("luts").delete(id); } catch{} };
 
-    let gl = null, glProg = null, vTex = null, lTex = null, glLoc = {}, useWebGL = false;
+    let gl=null, glProg=null, vTex=null, lTex=null, glLoc={}, useWebGL=false;
     function initWebGL() {
       try {
-        gl = glCanvas.getContext("webgl", { alpha: false, antialias: false, preserveDrawingBuffer: false });
-        if (!gl) throw 0;
-        const vs = "attribute vec2 aPos; varying vec2 vUv; void main(){ vUv=vec2(aPos.x*.5+.5,.5-aPos.y*.5); gl_Position=vec4(aPos,0.,1.); }";
-        const fs = `precision mediump float; varying vec2 vUv; uniform sampler2D uVideo,uLut; uniform vec2 uScale; uniform vec3 uGains; uniform float uN,uInt,uUse;
+        gl=glCanvas.getContext("webgl",{alpha:false,antialias:false,preserveDrawingBuffer:false}); if(!gl) throw 0;
+        const vs="attribute vec2 aPos; varying vec2 vUv; void main(){ vUv=vec2(aPos.x*.5+.5,.5-aPos.y*.5); gl_Position=vec4(aPos,0.,1.); }";
+        const fs=`precision mediump float; varying vec2 vUv; uniform sampler2D uVideo,uLut; uniform vec2 uCenter,uScale; uniform vec3 uGains; uniform float uN,uInt,uUse;
           vec3 sLut(vec3 c,float n){ float bs=clamp(c.b,0.,1.)*(n-1.),b0=floor(bs),b1=min(n-1.,b0+1.),ub=.5+clamp(c.r,0.,1.)*(n-1.),v=(.5+clamp(c.g,0.,1.)*(n-1.))/n;
             return mix(texture2D(uLut,vec2((b0*n+ub)/(n*n),v)).rgb, texture2D(uLut,vec2((b1*n+ub)/(n*n),v)).rgb, bs-b0); }
-          void main(){ vec3 col=clamp(texture2D(uVideo,(vUv-.5)*uScale+.5).rgb*uGains,0.,1.); if(uUse>.5&&uInt>.001) col=mix(col,sLut(col,uN),uInt); gl_FragColor=vec4(col,1.); }`;
-        const comp = (t, s) => { const sh = gl.createShader(t); gl.shaderSource(sh, s); gl.compileShader(sh); if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw 0; return sh; };
-        glProg = gl.createProgram(); gl.attachShader(glProg, comp(gl.VERTEX_SHADER, vs)); gl.attachShader(glProg, comp(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(glProg); gl.useProgram(glProg);
-        const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,1,1]), gl.STATIC_DRAW);
-        const aPos = gl.getAttribLocation(glProg, "aPos"); gl.enableVertexAttribArray(aPos); gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
-        const mkTex = () => { const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR); return t; };
-        vTex = mkTex(); lTex = mkTex();
-        ["uVideo","uLut","uScale","uGains","uN","uInt","uUse"].forEach((k) => glLoc[k] = gl.getUniformLocation(glProg, k));
-        gl.uniform1i(glLoc.uVideo, 0); gl.uniform1i(glLoc.uLut, 1); useWebGL = true;
-      } catch { useWebGL = false; video.classList.add("fallback"); }
+          void main(){ vec2 uv=uCenter+(vUv-.5)*uScale; vec3 col=clamp(texture2D(uVideo,uv).rgb*uGains,0.,1.); if(uUse>.5&&uInt>.001) col=mix(col,sLut(col,uN),uInt); gl_FragColor=vec4(col,1.); }`;
+        const comp=(t,s)=>{const sh=gl.createShader(t);gl.shaderSource(sh,s);gl.compileShader(sh);if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS))throw 0;return sh;};
+        glProg=gl.createProgram(); gl.attachShader(glProg,comp(gl.VERTEX_SHADER,vs)); gl.attachShader(glProg,comp(gl.FRAGMENT_SHADER,fs)); gl.linkProgram(glProg); gl.useProgram(glProg);
+        const buf=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,buf); gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+        const aP=gl.getAttribLocation(glProg,"aPos"); gl.enableVertexAttribArray(aP); gl.vertexAttribPointer(aP,2,gl.FLOAT,false,0,0);
+        const mkT=()=>{const t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);return t;};
+        vTex=mkT(); lTex=mkT(); ["uVideo","uLut","uCenter","uScale","uGains","uN","uInt","uUse"].forEach(k=>glLoc[k]=gl.getUniformLocation(glProg,k));
+        gl.uniform1i(glLoc.uVideo,0); gl.uniform1i(glLoc.uLut,1); useWebGL=true;
+      } catch { useWebGL=false; video.classList.add("fallback"); }
     }
-
     function uploadLutGL(lut) {
       if (!useWebGL || !lut?.data) return;
-      const N = lut.size, atlas = new Uint8Array(N ** 3 * 4);
-      for (let g = 0; g < N; g++) for (let b = 0; b < N; b++) for (let r = 0; r < N; r++) {
-        const src = (r + N*(g + N*b))*4, dst = (g*(N*N) + (b*N + r))*4;
-        atlas[dst] = lut.data[src]; atlas[dst+1] = lut.data[src+1]; atlas[dst+2] = lut.data[src+2]; atlas[dst+3] = 255;
-      }
-      gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, lTex); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, N*N, N, 0, gl.RGBA, gl.UNSIGNED_BYTE, atlas);
+      const N=lut.size, atlas=new Uint8Array(N**3*4);
+      for(let g=0;g<N;g++) for(let b=0;b<N;b++) for(let r=0;r<N;r++) { const s=(r+N*(g+N*b))*4,d=(g*(N*N)+(b*N+r))*4; atlas[d]=lut.data[s];atlas[d+1]=lut.data[s+1];atlas[d+2]=lut.data[s+2];atlas[d+3]=255; }
+      gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D,lTex); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
+      gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,N*N,N,0,gl.RGBA,gl.UNSIGNED_BYTE,atlas);
     }
-
-    function renderGL(viewW, viewH, vidW, vidH) {
+    function renderGL(viewW, viewH, vidW, vidH, totalScale) {
       if (!useWebGL) return;
-      const dpr = Math.min(window.devicePixelRatio || 1, 2), tw = Math.round(viewW*dpr), th = Math.round(viewH*dpr);
-      if (glCanvas.width !== tw || glCanvas.height !== th) { glCanvas.width = tw; glCanvas.height = th; }
-      gl.viewport(0, 0, tw, th);
-      const va = viewW/viewH, via = vidW/vidH;
-      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, vTex); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
-      const lut = getActiveLut(), gains = getTempGains(kelvin);
-      gl.uniform2f(glLoc.uScale, via > va ? va/via : 1, via > va ? 1 : via/va);
-      gl.uniform3f(glLoc.uGains, gains[0], gains[1], gains[2]);
-      gl.uniform1f(glLoc.uN, lut?.size || 2); gl.uniform1f(glLoc.uInt, lutIntensity); gl.uniform1f(glLoc.uUse, lut?.data ? 1 : 0);
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      const dpr=Math.min(window.devicePixelRatio||1,2), tw=Math.round(viewW*dpr), th=Math.round(viewH*dpr);
+      if (glCanvas.width!==tw || glCanvas.height!==th) { glCanvas.width=tw; glCanvas.height=th; }
+      gl.viewport(0,0,tw,th);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D,vTex); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
+      gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,video);
+      const lut=getActiveLut(), gains=getTempGains(kelvin);
+      gl.uniform2f(glLoc.uCenter, camCX/vidW, camCY/vidH); gl.uniform2f(glLoc.uScale, viewW/(vidW*totalScale), viewH/(vidH*totalScale));
+      gl.uniform3f(glLoc.uGains, gains[0], gains[1], gains[2]); gl.uniform1f(glLoc.uN, lut?.size||2); gl.uniform1f(glLoc.uInt, lutIntensity); gl.uniform1f(glLoc.uUse, lut?.data?1:0);
+      gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
     }
 
-    const getActiveLut = () => lutList.find((l) => l.id === activeLutId) || lutList[0];
-
+    const getActiveLut = () => lutList.find(l => l.id === activeLutId) || lutList[0];
     function updateColorUI() {
       const lut = getActiveLut();
       intensityRow.style.display = lut?.data ? "flex" : "none";
-      tempVal.textContent = `${kelvin}K • ${kelvin < 5100 ? "Lạnh" : (kelvin > 5900 ? "Ấm" : "Chuẩn")}`;
-      intensityVal.textContent = `${Math.round(lutIntensity * 100)}%`;
-      colorInfo.textContent = `${lut?.name || "Gốc"} • ${kelvin}K`;
+      tempVal.textContent = `${kelvin}K • ${kelvin<5100?"Lạnh":(kelvin>5900?"Ấm":"Chuẩn")}`;
+      intensityVal.textContent = `${Math.round(lutIntensity*100)}%`;
+      colorInfo.textContent = `${lut?.name||"Gốc"} • ${kelvin}K`;
     }
-
     function renderLutStrip() {
       lutStrip.innerHTML = "";
       for (const lut of lutList) {
-        const card = document.createElement("div");
-        card.className = "lut-card" + (lut.id === activeLutId ? " active" : "");
+        const card = document.createElement("div"); card.className = "lut-card" + (lut.id===activeLutId?" active":"");
         card.innerHTML = `<span class="lut-swatch" style="background:${lut.swatch}"></span><span class="lut-name"></span>`;
         card.querySelector(".lut-name").textContent = lut.name;
         if (lut.custom) {
-          const del = document.createElement("button"); del.className = "lut-del"; del.textContent = "×";
-          del.onclick = async (e) => {
-            e.stopPropagation(); await deleteCustomLut(lut.id); lutList = lutList.filter((x) => x.id !== lut.id);
-            if (activeLutId === lut.id) activeLutId = "none";
-            uploadLutGL(getActiveLut()); renderLutStrip(); updateColorUI();
-          };
+          const del = document.createElement("button"); del.className="lut-del"; del.textContent="×";
+          del.onclick = async (e)=>{ e.stopPropagation(); await deleteCustomLut(lut.id); lutList=lutList.filter(x=>x.id!==lut.id); if(activeLutId===lut.id) activeLutId="none"; uploadLutGL(getActiveLut()); renderLutStrip(); updateColorUI(); };
           card.appendChild(del);
         }
-        card.onclick = () => { activeLutId = lut.id; uploadLutGL(lut); renderLutStrip(); updateColorUI(); };
+        card.onclick = ()=>{ activeLutId=lut.id; uploadLutGL(lut); renderLutStrip(); updateColorUI(); };
         lutStrip.appendChild(card);
       }
     }
-
     async function addParsedLut(parsed) {
-      const id = "custom_" + Date.now();
-      const lut = { id, name: parsed.name, swatch: "linear-gradient(135deg,#a855f7,#ec4899)", custom: true, size: parsed.size, data: parsed.data };
-      lutList.push(lut); activeLutId = id; await saveCustomLut(lut);
-      uploadLutGL(lut); renderLutStrip(); updateColorUI(); sourceModal.classList.remove("open"); showToast(`Đã áp LUT "${lut.name}"`);
+      const id="custom_"+Date.now(), lut={id,name:parsed.name,swatch:"linear-gradient(135deg,#a855f7,#ec4899)",custom:true,size:parsed.size,data:parsed.data};
+      lutList.push(lut); activeLutId=id; await saveCustomLut(lut); uploadLutGL(lut); renderLutStrip(); updateColorUI(); sourceModal.classList.remove("open"); showToast(`Đã áp LUT "${lut.name}"`);
     }
-
     function applyColorToCanvas(c, lut, intensity, k) {
-      const hasLut = lut?.data && intensity > 0.001;
-      if (!hasLut && k === 5500) return;
-      const c2d = c.getContext("2d"), img = c2d.getImageData(0, 0, c.width, c.height), px = img.data, [rg, gg, bg] = getTempGains(k);
-      if (!hasLut) { for (let i = 0; i < px.length; i += 4) { px[i]*=rg; px[i+1]*=gg; px[i+2]*=bg; } c2d.putImageData(img, 0, 0); return; }
-      const N = lut.size, n1 = N-1, ld = lut.data, inv = 1/255, im = 1-intensity, rs = N*4, ss = N*N*4;
-      for (let i = 0; i < px.length; i += 4) {
-        const sr = Math.min(255, px[i]*rg), sg = Math.min(255, px[i+1]*gg), sb = Math.min(255, px[i+2]*bg);
-        const rx = sr*inv*n1, gy = sg*inv*n1, bz = sb*inv*n1;
-        const x0 = rx|0, x1 = x0<n1?x0+1:n1, fx = rx-x0, y0 = gy|0, y1 = y0<n1?y0+1:n1, fy = gy-y0, z0 = bz|0, z1 = z0<n1?z0+1:n1, fz = bz-z0;
-        const i000=x0*4+y0*rs+z0*ss, i100=x1*4+y0*rs+z0*ss, i010=x0*4+y1*rs+z0*ss, i110=x1*4+y1*rs+z0*ss;
-        const i001=x0*4+y0*rs+z1*ss, i101=x1*4+y0*rs+z1*ss, i011=x0*4+y1*rs+z1*ss, i111=x1*4+y1*rs+z1*ss;
-        for (let ch = 0; ch < 3; ch++) {
-          const c00 = ld[i000+ch] + (ld[i100+ch]-ld[i000+ch])*fx, c10 = ld[i010+ch] + (ld[i110+ch]-ld[i010+ch])*fx;
-          const c01 = ld[i001+ch] + (ld[i101+ch]-ld[i001+ch])*fx, c11 = ld[i011+ch] + (ld[i111+ch]-ld[i011+ch])*fx;
-          const lv = (c00 + (c10-c00)*fy)*(1-fz) + (c01 + (c11-c01)*fy)*fz;
-          px[i+ch] = (ch===0?sr:(ch===1?sg:sb))*im + lv*intensity;
+      const hasLut = lut?.data && intensity>0.001; if (!hasLut && k===5500) return;
+      const c2d=c.getContext("2d"), img=c2d.getImageData(0,0,c.width,c.height), px=img.data, [rg,gg,bg]=getTempGains(k);
+      if (!hasLut) { for(let i=0;i<px.length;i+=4){px[i]*=rg;px[i+1]*=gg;px[i+2]*=bg;} c2d.putImageData(img,0,0); return; }
+      const N=lut.size, n1=N-1, ld=lut.data, inv=1/255, im=1-intensity, rs=N*4, ss=N*N*4;
+      for (let i=0;i<px.length;i+=4) {
+        const sr=Math.min(255,px[i]*rg), sg=Math.min(255,px[i+1]*gg), sb=Math.min(255,px[i+2]*bg);
+        const rx=sr*inv*n1, gy=sg*inv*n1, bz=sb*inv*n1;
+        const x0=rx|0,x1=x0<n1?x0+1:n1,fx=rx-x0, y0=gy|0,y1=y0<n1?y0+1:n1,fy=gy-y0, z0=bz|0,z1=z0<n1?z0+1:n1,fz=bz-z0;
+        const i000=x0*4+y0*rs+z0*ss,i100=x1*4+y0*rs+z0*ss,i010=x0*4+y1*rs+z0*ss,i110=x1*4+y1*rs+z0*ss;
+        const i001=x0*4+y0*rs+z1*ss,i101=x1*4+y0*rs+z1*ss,i011=x0*4+y1*rs+z1*ss,i111=x1*4+y1*rs+z1*ss;
+        for(let ch=0;ch<3;ch++){
+          const c00=ld[i000+ch]+(ld[i100+ch]-ld[i000+ch])*fx, c10=ld[i010+ch]+(ld[i110+ch]-ld[i010+ch])*fx;
+          const c01=ld[i001+ch]+(ld[i101+ch]-ld[i001+ch])*fx, c11=ld[i011+ch]+(ld[i111+ch]-ld[i011+ch])*fx;
+          px[i+ch]=(ch===0?sr:(ch===1?sg:sb))*im + ((c00+(c10-c00)*fy)*(1-fz)+(c01+(c11-c01)*fy)*fz)*intensity;
         }
       }
-      c2d.putImageData(img, 0, 0);
+      c2d.putImageData(img,0,0);
     }
 
     function setStatus(state, text) {
-      statusBadge.classList.remove("good", "loading"); shutterBtn.classList.remove("ready");
-      if (state === "good") { statusBadge.classList.add("good"); shutterBtn.classList.add("ready"); }
-      else if (state === "loading") statusBadge.classList.add("loading");
+      statusBadge.classList.remove("good","loading","ai-wait"); shutterBtn.classList.remove("ready");
+      if (state==="good") { statusBadge.classList.add("good"); shutterBtn.classList.add("ready"); }
+      else if (state==="loading") statusBadge.classList.add("loading");
+      else if (state==="ai-wait") statusBadge.classList.add("ai-wait");
       statusText.textContent = text;
     }
 
-    async function initAI() {
+    async function ensureAI() {
+      if (objectDetector || aiLoading) return;
+      aiLoading = true;
       try {
-        setStatus("loading", "Đang nạp AI...");
         const vision = await FilesetResolver.forVisionTasks("./mediapipe/wasm");
-        objectDetector = await ObjectDetector.createFromOptions(vision, { baseOptions: { modelAssetPath: "./mediapipe/efficientdet_lite0.tflite", delegate: "CPU" }, runningMode: "VIDEO", scoreThreshold: 0.36, maxResults: 5 });
-        setStatus("idle", "Đưa chủ thể vào khung"); scheduleNextAI(100);
-      } catch { setStatus("idle", "AI tạm tắt (vẫn chụp được)"); }
+        objectDetector = await ObjectDetector.createFromOptions(vision, { baseOptions:{ modelAssetPath:"./mediapipe/efficientdet_lite0.tflite", delegate:"CPU" }, runningMode:"VIDEO", scoreThreshold:0.46, maxResults:5 });
+      } catch { showToast("AI chưa sẵn sàng"); } finally { aiLoading = false; }
     }
 
-    function scheduleNextAI(ms = 110) { clearTimeout(aiTimerId); aiTimerId = setTimeout(runAiStep, ms); }
+    function startScanPhase() {
+      if (!aiEnabled) return;
+      aiPhase = "scanning"; scanStartTs = performance.now(); scanSamples = [];
+      lockedTrack = null; alignStartTs = 0; smoothedCrop = null;
+      rescanBtn.classList.add("show");
+    }
+
+    const scheduleNextAI = (ms=110) => { clearTimeout(aiTimerId); if (aiEnabled) aiTimerId = setTimeout(runAiStep, ms); };
+
+    function processAIScanOrTrack(dets, vidW, vidH) {
+      const now = performance.now();
+      if (aiPhase === "scanning") {
+        // Gom mẫu ổn định trong ~1.2 giây để chọn chủ thể & góc bố cục 1/3 đẹp nhất
+        for (const d of dets) {
+          const b = d.boundingBox, c = d.categories?.[0]; if (!c || IGNORE_BG.has(c.categoryName)) continue;
+          const cx = b.originX + b.width/2, cy = b.originY + b.height/2;
+          const centerBonus = 1.25 - Math.hypot(cx/vidW - 0.5, cy/vidH - 0.5) * 0.5;
+          const sc = c.score * (c.categoryName==="person" ? 1.6 : 1.0) * centerBonus;
+          scanSamples.push({ x:b.originX, y:b.originY, w:b.width, h:b.height, cx, cy, cat:c.categoryName, score:sc });
+        }
+        if (now - scanStartTs >= 1200 && scanSamples.length > 0) {
+          // Chọn mẫu điểm cao nhất và trung bình hóa các mẫu gần nó
+          scanSamples.sort((a,b) => b.score - a.score);
+          const top = scanSamples[0];
+          const cluster = scanSamples.filter(s => s.cat === top.cat && Math.hypot(s.cx-top.cx, s.cy-top.cy) < vidW*0.2);
+          const avg = (k) => cluster.reduce((sum, s) => sum + s[k], 0) / cluster.length;
+          const ax = avg("x"), ay = avg("y"), aw = avg("w"), ah = avg("h");
+          lockedTrack = { x:ax, y:ay, w:aw, h:ah, cat:top.cat, missed:0 };
+          // Chọn góc đẹp nhất theo quy tắc 1/3 (bên nào còn nhiều không gian thì đặt chủ thể sang bên còn lại)
+          const fx = ax + aw/2;
+          bestAnchor = {
+            x: aw > vidW*0.5 ? 0.5 : (fx < vidW*0.5 ? 0.36 : 0.64),
+            y: top.cat === "person" ? 0.34 : 0.43
+          };
+          aiPhase = "guiding"; alignStartTs = 0;
+        }
+        return;
+      }
+
+      if (!lockedTrack) return;
+      const lcx = lockedTrack.x + lockedTrack.w/2, lcy = lockedTrack.y + lockedTrack.h/2;
+      let best = null, bestDist = Infinity;
+      for (const d of dets) {
+        const b=d.boundingBox, cat=d.categories?.[0]?.categoryName;
+        if (lockedTrack.cat==="person" && cat!=="person") continue;
+        const dist = Math.hypot((b.originX+b.width/2)-lcx, (b.originY+b.height/2)-lcy);
+        if (dist < Math.max(lockedTrack.w,lockedTrack.h)*0.95 + vidW*0.14 && dist < bestDist) { bestDist=dist; best=d; }
+      }
+      if (best) {
+        const b=best.boundingBox;
+        const alpha = Math.hypot((b.originX+b.width/2)-lcx, (b.originY+b.height/2)-lcy) > vidW*0.025 ? 0.25 : 0.08;
+        lockedTrack.x += (b.originX-lockedTrack.x)*alpha; lockedTrack.y += (b.originY-lockedTrack.y)*alpha;
+        lockedTrack.w += (b.width-lockedTrack.w)*alpha; lockedTrack.h += (b.height-lockedTrack.h)*alpha;
+        lockedTrack.missed = 0;
+      } else {
+        lockedTrack.missed++;
+        if (lockedTrack.missed > 16) startScanPhase(); // Mất dấu hoàn toàn > 1.8s -> quét lại
+      }
+    }
 
     function runAiStep() {
-      if (!aiEnabled || !objectDetector || !video.videoWidth || !video.videoHeight || video.paused || isInferring) { scheduleNextAI(140); return; }
+      if (!aiEnabled) return;
+      if (!objectDetector || !video.videoWidth || !video.videoHeight || video.paused || isInferring) { scheduleNextAI(130); return; }
       isInferring = true; const t0 = performance.now();
       try {
-        const vidW = video.videoWidth, vidH = video.videoHeight, aiW = 320, aiH = Math.max(180, Math.round((vidH/vidW)*aiW));
-        if (aiCanvas.width !== aiW || aiCanvas.height !== aiH) { aiCanvas.width = aiW; aiCanvas.height = aiH; }
-        aiCtx.drawImage(video, 0, 0, aiW, aiH);
-        const ts = Math.max(lastInferTs + 1, Math.round(performance.now())); lastInferTs = ts;
-        const res = objectDetector.detectForVideo(aiCanvas, ts), sx = vidW/aiW, sy = vidH/aiH;
-        latestDetections = (res?.detections || []).map((d) => ({ categories: d.categories, boundingBox: { originX: d.boundingBox.originX*sx, originY: d.boundingBox.originY*sy, width: d.boundingBox.width*sx, height: d.boundingBox.height*sy } }));
+        const vidW=video.videoWidth, vidH=video.videoHeight, aiW=320, aiH=Math.max(180,Math.round((vidH/vidW)*aiW));
+        if (aiCanvas.width!==aiW || aiCanvas.height!==aiH) { aiCanvas.width=aiW; aiCanvas.height=aiH; }
+        aiCtx.drawImage(video,0,0,aiW,aiH);
+        const ts=Math.max(lastInferTs+1,Math.round(performance.now())); lastInferTs=ts;
+        const res=objectDetector.detectForVideo(aiCanvas,ts), sx=vidW/aiW, sy=vidH/aiH;
+        const dets=(res?.detections||[]).map(d=>({ categories:d.categories, boundingBox:{ originX:d.boundingBox.originX*sx, originY:d.boundingBox.originY*sy, width:d.boundingBox.width*sx, height:d.boundingBox.height*sy } }));
+        processAIScanOrTrack(dets, vidW, vidH);
       } catch {} finally { isInferring = false; }
-      scheduleNextAI(Math.max(85, Math.min(220, (performance.now() - t0) + 60)));
+      scheduleNextAI(Math.max(90, Math.min(200, (performance.now()-t0)+55)));
+    }
+
+    async function applyHardwareFocus(xNorm, yNorm) {
+      if (!videoTrack) return;
+      try {
+        const adv = [];
+        if (camCaps.focusMode?.includes("continuous")) adv.push({ focusMode: "continuous" });
+        if (xNorm!=null && camCaps.pointsOfInterest) adv.push({ pointsOfInterest: [{ x:xNorm, y:yNorm }] });
+        if (adv.length) await videoTrack.applyConstraints({ advanced: adv });
+      } catch {}
+    }
+    function applyHardwareZoom(targetZ) {
+      if (!videoTrack || !camCaps.zoom) { hwZoom=1.0; return; }
+      const desiredHw = clamp(targetZ, camCaps.zoom.min||1, camCaps.zoom.max||1), now=performance.now();
+      if (Math.abs(desiredHw - hwZoom) >= 0.05 && now - lastHwApply > 110) {
+        hwZoom = desiredHw; lastHwApply = now;
+        videoTrack.applyConstraints({ advanced: [{ zoom: hwZoom }] }).catch(()=>{});
+      }
     }
 
     async function startCamera() {
       errorOverlay.classList.remove("show"); shutterBtn.disabled = true;
-      if (currentStream) { currentStream.getTracks().forEach((t) => t.stop()); currentStream = null; }
-      let stream = null, lastErr = null;
-      for (const c of [{ audio: false, video: { facingMode: { ideal: facingMode }, width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30, max: 30 } } }, { audio: false, video: { facingMode: { ideal: facingMode } } }]) {
-        try { stream = await navigator.mediaDevices.getUserMedia(c); break; } catch (e) { lastErr = e; }
+      if (currentStream) { currentStream.getTracks().forEach(t=>t.stop()); currentStream=null; videoTrack=null; }
+      let stream=null, lastErr=null;
+      for (const c of [{audio:false,video:{facingMode:{ideal:facingMode},width:{ideal:2560},height:{ideal:1440},frameRate:{ideal:30,max:30}}},{audio:false,video:{facingMode:{ideal:facingMode},width:{ideal:1920},height:{ideal:1080}}},{audio:false,video:{facingMode:{ideal:facingMode}}}]) {
+        try { stream = await navigator.mediaDevices.getUserMedia(c); break; } catch(e){ lastErr=e; }
       }
-      if (!stream) {
-        errorOverlay.classList.add("show");
-        errorDesc.textContent = lastErr?.name === "NotAllowedError" ? "Bạn chưa cấp quyền Camera." : "Không mở được camera trên thiết bị này.";
-        return;
-      }
-      currentStream = stream; video.srcObject = stream;
+      if (!stream) { errorOverlay.classList.add("show"); errorDesc.textContent=lastErr?.name==="NotAllowedError"?"Bạn chưa cấp quyền Camera.":"Không mở được camera."; return; }
+      currentStream = stream; videoTrack = stream.getVideoTracks()[0];
+      camCaps = (typeof videoTrack.getCapabilities === "function") ? (videoTrack.getCapabilities() || {}) : {};
+      video.srcObject = stream;
       const isFront = facingMode === "user";
-      video.classList.toggle("mirrored", isFront); glCanvas.classList.toggle("mirrored", isFront); overlayCanvas.classList.toggle("mirrored", isFront);
-      if (video.readyState < 1) await new Promise((r) => { const t = setTimeout(r, 1500); video.addEventListener("loadedmetadata", () => { clearTimeout(t); r(); }, { once: true }); });
+      video.classList.toggle("mirrored",isFront); glCanvas.classList.toggle("mirrored",isFront); overlayCanvas.classList.toggle("mirrored",isFront);
+      if (video.readyState < 1) await new Promise(r=>{ const t=setTimeout(r,1500); video.addEventListener("loadedmetadata",()=>{clearTimeout(t);r();},{once:true}); });
       try { await video.play(); } catch {}
-      smoothedCrop = null; latestDetections = []; shutterBtn.disabled = false;
-      metaInfo.textContent = `${isFront ? "CAM TRƯỚC" : "CAM SAU"} • ${video.videoWidth ? `${video.videoWidth}×${video.videoHeight}` : "HD"}`;
+      applyHardwareFocus();
+      smoothedCrop=null; lockedTrack=null; camReady=false; userZoom=1.0; activeZoom=1.0; hwZoom=1.0;
+      if (aiEnabled) startScanPhase();
+      zoomPills.forEach(p=>p.classList.toggle("active",p.dataset.z==="1"));
+      shutterBtn.disabled=false;
+      metaInfo.textContent = `${isFront?"CAM TRƯỚC":"CAM SAU"} • ${video.videoWidth?`${video.videoWidth}×${video.videoHeight}`:"HD"}`;
       if (!rafId) rafId = requestAnimationFrame(renderLoop);
     }
 
-    function pickMainSubject(dets, vidW, vidH) {
-      let best = null, bs = -1;
-      for (const d of dets || []) {
-        const b = d.boundingBox, c = d.categories?.[0]; if (!b || !c) continue;
-        const sc = c.score * (c.categoryName === "person" ? 1.45 : 1) * (.65 + Math.min((b.width*b.height)/(vidW*vidH), .5)) * (1.2 - Math.hypot((b.originX+b.width/2)/vidW - .5, (b.originY+b.height/2)/vidH - .5)*.5);
-        if (sc > bs) { bs = sc; best = d; }
-      }
-      return best;
+    function computeIdealCrop(track, vidW, vidH, ratio) {
+      let mw=vidW*.84, mh=mw/ratio; if(mh>vidH*.82){mh=vidH*.82;mw=mh*ratio;}
+      if (!track) return { x:(vidW-mw)/2, y:(vidH-mh)/2, w:mw, h:mh };
+      const isP = track.cat === "person";
+      let cw = Math.max(track.w*1.85, track.h*(isP?1.5:1.65)*ratio), ch = cw/ratio;
+      if (cw<vidW*.40) { cw=vidW*.40; ch=cw/ratio; }
+      if (cw>vidW) { cw=vidW; ch=cw/ratio; }
+      if (ch>vidH) { ch=vidH; cw=ch*ratio; }
+      const scx=track.x+track.w/2, sfy=isP?track.y+track.h*.28:track.y+track.h/2;
+      return {
+        x: clamp(scx - cw*bestAnchor.x, 0, vidW - cw),
+        y: clamp(sfy - ch*bestAnchor.y, 0, vidH - ch),
+        w: cw, h: ch
+      };
     }
 
-    function computeCrop(subj, vidW, vidH, ratio) {
-      let mw = vidW * .86, mh = mw / ratio; if (mh > vidH * .84) { mh = vidH * .84; mw = mh * ratio; }
-      if (!subj) return { x: (vidW-mw)/2, y: (vidH-mh)/2, w: mw, h: mh, hasSubject: false, good: false };
-      const b = subj.boundingBox, isP = subj.categories?.[0]?.categoryName === "person";
-      let cw = Math.max(b.width*1.9, b.height*(isP ? 1.6 : 1.72)*ratio), ch = cw/ratio;
-      if (cw < vidW*.44) { cw = vidW*.44; ch = cw/ratio; }
-      if (cw > vidW) { cw = vidW; ch = cw/ratio; }
-      if (ch > vidH) { ch = vidH; cw = ch*ratio; }
-      const scx = b.originX + b.width/2, sfy = isP ? b.originY + b.height*.28 : b.originY + b.height/2;
-      const cx = Math.max(0, Math.min(vidW - cw, scx - cw * (b.width < cw*.48 ? (scx < vidW/2 ? .36 : .64) : .5)));
-      const cy = Math.max(0, Math.min(vidH - ch, sfy - ch * (isP ? .34 : .44)));
-      const inside = b.originX >= cx+cw*.03 && b.originX+b.width <= cx+cw*.97 && b.originY >= cy+ch*.03 && b.originY+b.height <= cy+ch*.97;
-      const ar = (b.width*b.height)/(cw*ch), rcx = (scx-cx)/cw, rcy = (sfy-cy)/ch;
-      const good = inside && ar >= .08 && ar <= .82 && (Math.abs(rcx-1/3)<.14 || Math.abs(rcx-2/3)<.14 || Math.abs(rcx-.5)<.12) && (Math.abs(rcy-1/3)<.15 || Math.abs(rcy-.5)<.15);
-      return { x: cx, y: cy, w: cw, h: ch, hasSubject: true, good };
-    }
-
-    function drawOverlay(viewW, viewH, vidW, vidH, crop, subj) {
+    function drawOverlay(viewW, viewH, vidW, vidH, totalScale, crop, track, guidePt, subjPt) {
       ctx.clearRect(0, 0, viewW, viewH);
-      const sc = Math.max(viewW/vidW, viewH/vidH), ox = (viewW - vidW*sc)/2, oy = (viewH - vidH*sc)/2;
-      const sx = crop.x*sc + ox, sy = crop.y*sc + oy, sw = crop.w*sc, sh = crop.h*sc;
-      ctx.save(); ctx.fillStyle = "rgba(0,0,0,.5)"; ctx.beginPath(); ctx.rect(0,0,viewW,viewH); ctx.rect(sx,sy,sw,sh); ctx.fill("evenodd"); ctx.restore();
-      ctx.save(); ctx.strokeStyle = crop.good ? "rgba(134,239,172,.42)" : "rgba(255,255,255,.22)"; ctx.lineWidth = 1;
-      for (let i = 1; i <= 2; i++) {
-        ctx.beginPath(); ctx.moveTo(sx+sw*i/3, sy); ctx.lineTo(sx+sw*i/3, sy+sh); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(sx, sy+sh*i/3); ctx.lineTo(sx+sw, sy+sh*i/3); ctx.stroke();
-      }
-      ctx.strokeStyle = crop.good ? "rgba(74,222,128,.9)" : "rgba(255,255,255,.45)"; ctx.lineWidth = 1.4;
-      for (let ix = 1; ix <= 2; ix++) for (let iy = 1; iy <= 2; iy++) {
-        const px = sx+sw*ix/3, py = sy+sh*iy/3;
-        ctx.beginPath(); ctx.moveTo(px-4,py); ctx.lineTo(px+4,py); ctx.moveTo(px,py-4); ctx.lineTo(px,py+4); ctx.stroke();
-      }
-      ctx.restore();
-      ctx.save(); ctx.strokeStyle = crop.good ? "#4ade80" : "rgba(255,255,255,.68)"; ctx.lineWidth = crop.good ? 2 : 1; ctx.strokeRect(sx,sy,sw,sh);
-      const cn = 24; ctx.strokeStyle = crop.good ? "#22c55e" : "#fff"; ctx.lineWidth = 3.5; ctx.lineCap = "round";
-      ctx.beginPath();
-      ctx.moveTo(sx,sy+cn); ctx.lineTo(sx,sy); ctx.lineTo(sx+cn,sy);
-      ctx.moveTo(sx+sw-cn,sy); ctx.lineTo(sx+sw,sy); ctx.lineTo(sx+sw,sy+cn);
-      ctx.moveTo(sx,sy+sh-cn); ctx.lineTo(sx,sy+sh); ctx.lineTo(sx+cn,sy+sh);
-      ctx.moveTo(sx+sw-cn,sy+sh); ctx.lineTo(sx+sw,sy+sh); ctx.lineTo(sx+sw,sy+sh-cn);
-      ctx.stroke(); ctx.restore();
-      if (subj && aiEnabled) {
-        const b = subj.boundingBox, bx = b.originX*sc+ox, by = b.originY*sc+oy;
-        ctx.save(); ctx.setLineDash([5,5]); ctx.strokeStyle = crop.good ? "rgba(74,222,128,.85)" : "rgba(251,191,36,.85)"; ctx.lineWidth = 1.4; ctx.strokeRect(bx,by,b.width*sc,b.height*sc); ctx.restore();
-        if (facingMode !== "user") {
-          const cat = subj.categories?.[0], tag = `${LABEL_VI[cat?.categoryName] || cat?.categoryName || "Chủ thể"} • ${Math.round((cat?.score||0)*100)}%`;
-          ctx.save(); ctx.font = "600 11.5px -apple-system, sans-serif";
-          const tw = ctx.measureText(tag).width + 16, tx = Math.max(10, Math.min(viewW-tw-10, bx)), ty = Math.max(26, by-6);
-          ctx.fillStyle = "rgba(12,12,16,.78)"; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(tx,ty-18,tw,22,6); else ctx.rect(tx,ty-18,tw,22); ctx.fill();
-          ctx.fillStyle = crop.good ? "#86efac" : "#fde68a"; ctx.fillText(tag, tx+8, ty-3); ctx.restore();
+      const toX = (vx) => viewW/2 + (vx - camCX)*totalScale, toY = (vy) => viewH/2 + (vy - camCY)*totalScale;
+
+      if (aiEnabled) {
+        if (aiPhase === "scanning") {
+          // Vòng quét tĩnh ở giữa màn hình
+          const p = clamp((performance.now() - scanStartTs) / 1200, 0, 1);
+          ctx.save(); ctx.strokeStyle="rgba(255,255,255,.25)"; ctx.lineWidth=3;
+          ctx.beginPath(); ctx.arc(viewW/2, viewH/2, 42, 0, Math.PI*2); ctx.stroke();
+          ctx.strokeStyle="#60a5fa"; ctx.beginPath(); ctx.arc(viewW/2, viewH/2, 42, -Math.PI/2, -Math.PI/2 + Math.PI*2*p); ctx.stroke();
+          ctx.restore();
+        } else if (track) {
+          // Khung bố cục 1/3 đẹp nhất
+          let sx, sy, sw, sh;
+          if (aiPhase === "guiding") {
+            sh = Math.min(viewH*0.68, (viewW*0.84)/targetRatio); sw = sh*targetRatio;
+            sx = (viewW - sw)/2; sy = (viewH - sh)/2;
+          } else {
+            sx = toX(crop.x); sy = toY(crop.y); sw = crop.w*totalScale; sh = crop.h*totalScale;
+          }
+
+          ctx.save(); ctx.fillStyle="rgba(0,0,0,.44)"; ctx.beginPath(); ctx.rect(0,0,viewW,viewH); ctx.rect(sx,sy,sw,sh); ctx.fill("evenodd"); ctx.restore();
+          ctx.save(); ctx.strokeStyle=aiPhase==="ready"?"rgba(134,239,172,.45)":"rgba(255,255,255,.22)"; ctx.lineWidth=1;
+          for(let i=1;i<=2;i++){ctx.beginPath();ctx.moveTo(sx+sw*i/3,sy);ctx.lineTo(sx+sw*i/3,sy+sh);ctx.stroke();ctx.beginPath();ctx.moveTo(sx,sy+sh*i/3);ctx.lineTo(sx+sw,sy+sh*i/3);ctx.stroke();}
+          ctx.restore();
+          ctx.save(); ctx.strokeStyle=aiPhase==="ready"?"#4ade80":"rgba(255,255,255,.72)"; ctx.lineWidth=aiPhase==="ready"?2.2:1.2; ctx.strokeRect(sx,sy,sw,sh);
+          const cn=22; ctx.strokeStyle=aiPhase==="ready"?"#22c55e":"#fff"; ctx.lineWidth=3.5; ctx.lineCap="round";
+          ctx.beginPath(); ctx.moveTo(sx,sy+cn);ctx.lineTo(sx,sy);ctx.lineTo(sx+cn,sy); ctx.moveTo(sx+sw-cn,sy);ctx.lineTo(sx+sw,sy);ctx.lineTo(sx+sw,sy+cn);
+          ctx.moveTo(sx,sy+sh-cn);ctx.lineTo(sx,sy+sh);ctx.lineTo(sx+cn,sy+sh); ctx.moveTo(sx+sw-cn,sy+sh);ctx.lineTo(sx+sw,sy+sh);ctx.lineTo(sx+sw,sy+sh-cn);
+          ctx.stroke(); ctx.restore();
+
+          if (aiPhase === "guiding" && guidePt && subjPt) {
+            // Vẽ vòng tròn đích + chấm chủ thể + mũi tên hướng dẫn lia cam
+            ctx.save();
+            ctx.strokeStyle="#fbbf24"; ctx.lineWidth=2.5; ctx.setLineDash([5,4]);
+            ctx.beginPath(); ctx.arc(guidePt.x, guidePt.y, 24, 0, Math.PI*2); ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.strokeStyle="rgba(251,191,36,.85)"; ctx.lineWidth=2;
+            ctx.beginPath(); ctx.moveTo(subjPt.x, subjPt.y); ctx.lineTo(guidePt.x, guidePt.y); ctx.stroke();
+            ctx.fillStyle="#ffffff"; ctx.beginPath(); ctx.arc(subjPt.x, subjPt.y, 7, 0, Math.PI*2); ctx.fill();
+            ctx.strokeStyle="#fbbf24"; ctx.lineWidth=2; ctx.stroke();
+            ctx.restore();
+          } else if (aiPhase === "ready" && subjPt) {
+            ctx.save(); ctx.strokeStyle="#4ade80"; ctx.lineWidth=2.5;
+            ctx.beginPath(); ctx.arc(subjPt.x, subjPt.y, 18, 0, Math.PI*2); ctx.stroke();
+            ctx.fillStyle="#4ade80"; ctx.beginPath(); ctx.arc(subjPt.x, subjPt.y, 4, 0, Math.PI*2); ctx.fill();
+            ctx.restore();
+          }
         }
+      }
+
+      if (focusRing && performance.now() - focusRing.t < 900) {
+        const age = (performance.now() - focusRing.t) / 900;
+        ctx.save(); ctx.globalAlpha = 1 - age*0.6; ctx.strokeStyle = "#fbbf24"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(focusRing.x, focusRing.y, 26 - age*6, 0, Math.PI*2); ctx.stroke();
+        ctx.restore();
       }
     }
 
     function renderLoop() {
       rafId = requestAnimationFrame(renderLoop);
       if (!video.videoWidth || !video.videoHeight || video.paused) return;
-      const dpr = Math.min(window.devicePixelRatio || 1, 2), viewW = stage.clientWidth, viewH = stage.clientHeight;
-      if (overlayCanvas.width !== Math.round(viewW*dpr) || overlayCanvas.height !== Math.round(viewH*dpr)) {
-        overlayCanvas.width = Math.round(viewW*dpr); overlayCanvas.height = Math.round(viewH*dpr);
-      }
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const vidW = video.videoWidth, vidH = video.videoHeight;
-      renderGL(viewW, viewH, vidW, vidH);
-      const subj = aiEnabled ? pickMainSubject(latestDetections, vidW, vidH) : null;
-      const tc = computeCrop(subj, vidW, vidH, targetRatio);
+      const dpr=Math.min(window.devicePixelRatio||1,2), viewW=stage.clientWidth, viewH=stage.clientHeight;
+      if (overlayCanvas.width!==Math.round(viewW*dpr)||overlayCanvas.height!==Math.round(viewH*dpr)) { overlayCanvas.width=Math.round(viewW*dpr); overlayCanvas.height=Math.round(viewH*dpr); }
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+
+      const vidW=video.videoWidth, vidH=video.videoHeight, baseScale=Math.max(viewW/vidW, viewH/vidH);
+      if (!camReady) { camCX=vidW/2; camCY=vidH/2; camReady=true; }
+
+      const activeTrack = aiEnabled ? lockedTrack : null;
+      const tc = computeIdealCrop(activeTrack, vidW, vidH, targetRatio);
       if (!smoothedCrop) smoothedCrop = { ...tc };
-      else {
-        ["x","y","w","h"].forEach((k) => smoothedCrop[k] += (tc[k] - smoothedCrop[k]) * 0.18);
-        smoothedCrop.hasSubject = tc.hasSubject; smoothedCrop.good = tc.good;
+      else ["x","y","w","h"].forEach(k=>smoothedCrop[k]+=(tc[k]-smoothedCrop[k])*0.12);
+
+      let desiredZoom = userZoom, targetCX = vidW/2, targetCY = vidH/2;
+      if (aiEnabled && aiPhase === "ready" && activeTrack) {
+        const fitZ = clamp(Math.min((vidW*0.8)/smoothedCrop.w, (vidH*0.8)/smoothedCrop.h), 1.0, 2.25);
+        desiredZoom = Math.max(userZoom, fitZ);
+        targetCX = smoothedCrop.x + smoothedCrop.w/2; targetCY = smoothedCrop.y + smoothedCrop.h/2;
       }
-      if (!aiEnabled) setStatus("idle", "AI tắt • Khung thủ công");
+
+      activeZoom += (desiredZoom - activeZoom) * 0.12;
+      applyHardwareZoom(activeZoom);
+      const digitalZoom = Math.max(1.0, activeZoom / Math.max(1.0, hwZoom));
+      const totalScale = baseScale * digitalZoom;
+      const halfW = (viewW/2)/totalScale, halfH = (viewH/2)/totalScale;
+      camCX = clamp(camCX + (targetCX - camCX)*0.12, halfW, vidW - halfW);
+      camCY = clamp(camCY + (targetCY - camCY)*0.12, halfH, vidH - halfH);
+      zoomInfo.textContent = `${activeZoom.toFixed(1)}×`;
+
+      renderGL(viewW, viewH, vidW, vidH, totalScale);
+
+      let guidePt = null, subjPt = null;
+      if (aiEnabled && activeTrack) {
+        const toX = (vx) => viewW/2 + (vx - camCX)*totalScale, toY = (vy) => viewH/2 + (vy - camCY)*totalScale;
+        const fx = activeTrack.x + activeTrack.w/2, fy = activeTrack.cat==="person" ? activeTrack.y + activeTrack.h*.28 : activeTrack.y + activeTrack.h/2;
+        subjPt = { x: toX(fx), y: toY(fy) };
+        const sh = Math.min(viewH*0.68, (viewW*0.84)/targetRatio), sw = sh*targetRatio;
+        guidePt = { x: (viewW-sw)/2 + sw*bestAnchor.x, y: (viewH-sh)/2 + sh*bestAnchor.y };
+
+        if (aiPhase === "guiding") {
+          const dist = Math.hypot(subjPt.x - guidePt.x, subjPt.y - guidePt.y);
+          if (dist < 44) {
+            if (!alignStartTs) alignStartTs = performance.now();
+            if (performance.now() - alignStartTs > 320) aiPhase = "ready";
+          } else {
+            alignStartTs = 0;
+          }
+        }
+      }
+
+      if (!aiEnabled) setStatus("idle", "Chụp thường");
       else if (!objectDetector) setStatus("loading", "Đang nạp AI...");
-      else if (smoothedCrop.good) setStatus("good", "Bố cục chuẩn");
-      else if (smoothedCrop.hasSubject) setStatus("idle", "Căn nhẹ vào lưới 1/3");
-      else setStatus("idle", "Đưa chủ thể vào khung");
-      drawOverlay(viewW, viewH, vidW, vidH, smoothedCrop, subj);
+      else if (aiPhase === "scanning") setStatus("loading", "Giữ yên máy • Đang quét góc đẹp...");
+      else if (aiPhase === "guiding") setStatus("ai-wait", "Lia chấm trắng vào vòng tròn vàng");
+      else if (aiPhase === "ready") setStatus("good", "Bố cục chuẩn • Bấm chụp!");
+
+      drawOverlay(viewW, viewH, vidW, vidH, totalScale, smoothedCrop, activeTrack, guidePt, subjPt);
     }
 
+    let pinchStartDist = 0, pinchStartZoom = 1;
+    overlayCanvas.addEventListener("touchstart", (e) => {
+      if (e.touches.length === 2) {
+        pinchStartDist = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+        pinchStartZoom = userZoom;
+      } else if (e.touches.length === 1 && video.videoWidth) {
+        const rect = overlayCanvas.getBoundingClientRect();
+        const rx = e.touches[0].clientX - rect.left, ry = e.touches[0].clientY - rect.top;
+        focusRing = { x: facingMode==="user"?(rect.width-rx):rx, y: ry, t: performance.now() };
+        applyHardwareFocus(clamp(rx/rect.width,0,1), clamp(ry/rect.height,0,1));
+      }
+    }, { passive: true });
+
+    overlayCanvas.addEventListener("touchmove", (e) => {
+      if (e.touches.length === 2 && pinchStartDist > 0) {
+        const d = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+        userZoom = clamp(pinchStartZoom * (d / pinchStartDist), 1.0, 5.0);
+        zoomPills.forEach(p => p.classList.toggle("active", Math.abs(parseFloat(p.dataset.z) - userZoom) < 0.25));
+      }
+    }, { passive: true });
+
+    zoomPills.forEach(p => p.onclick = () => { userZoom = parseFloat(p.dataset.z); zoomPills.forEach(x => x.classList.remove("active")); p.classList.add("active"); });
+    rescanBtn.onclick = startScanPhase;
+
     async function captureFullRes() {
-      if (!video.videoWidth || !smoothedCrop) return;
-      flashEl.classList.add("active"); setTimeout(() => flashEl.classList.remove("active"), 130);
-      const sx = Math.max(0, Math.round(smoothedCrop.x)), sy = Math.max(0, Math.round(smoothedCrop.y));
-      const sw = Math.min(video.videoWidth - sx, Math.round(smoothedCrop.w)), sh = Math.min(video.videoHeight - sy, Math.round(smoothedCrop.h));
-      const out = document.createElement("canvas"); out.width = sw; out.height = sh;
-      const oc = out.getContext("2d");
-      if (facingMode === "user") { oc.translate(sw, 0); oc.scale(-1, 1); }
-      oc.drawImage(video, sx, sy, sw, sh, 0, 0, sw, sh);
-      const lut = getActiveLut();
-      applyColorToCanvas(out, lut, lutIntensity, kelvin);
-      capturedDataUrl = out.toDataURL("image/jpeg", 0.95);
-      capturedBlob = await new Promise((r) => out.toBlob(r, "image/jpeg", 0.95));
-      previewImg.src = capturedDataUrl; previewRes.textContent = `${sw} × ${sh} px`;
-      previewSub.textContent = `${lut?.name || "Gốc"} • ${kelvin}K • Độ phân giải gốc`;
-      previewModal.classList.add("open");
+      if (!video.videoWidth) return;
+      flashEl.classList.add("active"); setTimeout(()=>flashEl.classList.remove("active"),130);
+      const vidW=video.videoWidth, vidH=video.videoHeight, viewW=stage.clientWidth, viewH=stage.clientHeight;
+      const digitalZoom = Math.max(1.0, activeZoom / Math.max(1.0, hwZoom));
+      const totalScale = Math.max(viewW/vidW, viewH/vidH) * digitalZoom;
+      let sx, sy, sw, sh;
+      if (aiEnabled && aiPhase==="ready" && smoothedCrop) {
+        sx=Math.max(0,Math.round(smoothedCrop.x)); sy=Math.max(0,Math.round(smoothedCrop.y));
+        sw=Math.min(vidW-sx,Math.round(smoothedCrop.w)); sh=Math.min(vidH-sy,Math.round(smoothedCrop.h));
+      } else {
+        sw=Math.min(vidW,Math.round(viewW/totalScale)); sh=Math.min(vidH,Math.round(viewH/totalScale));
+        sx=clamp(Math.round(camCX-sw/2),0,vidW-sw); sy=clamp(Math.round(camCY-sh/2),0,vidH-sh);
+      }
+      const out=document.createElement("canvas"); out.width=sw; out.height=sh;
+      const oc=out.getContext("2d"); if(facingMode==="user"){oc.translate(sw,0);oc.scale(-1,1);}
+      oc.drawImage(video,sx,sy,sw,sh,0,0,sw,sh);
+      const lut=getActiveLut(); applyColorToCanvas(out,lut,lutIntensity,kelvin);
+      capturedDataUrl=out.toDataURL("image/jpeg",0.95); capturedBlob=await new Promise(r=>out.toBlob(r,"image/jpeg",0.95));
+      previewImg.src=capturedDataUrl; previewRes.textContent=`${sw} × ${sh} px`; previewSub.textContent=`${lut?.name||"Gốc"} • ${kelvin}K • ${activeZoom.toFixed(1)}×`; previewModal.classList.add("open");
     }
 
     shutterBtn.onclick = captureFullRes;
-    switchCamBtn.onclick = () => { facingMode = facingMode === "environment" ? "user" : "environment"; startCamera(); };
-    toggleAiBtn.onclick = () => { aiEnabled = !aiEnabled; toggleAiBtn.classList.toggle("on", aiEnabled); aiLabel.textContent = aiEnabled ? "AI Bật" : "AI Tắt"; if (!aiEnabled) latestDetections = []; };
-    ratioBtns.forEach((b) => b.onclick = () => { ratioBtns.forEach((x) => x.classList.remove("active")); b.classList.add("active"); targetRatio = parseFloat(b.dataset.ratio); });
-    toggleColorBtn.onclick = () => { const op = colorDrawer.classList.toggle("open"); toggleColorBtn.classList.toggle("active-panel", op); };
-    tempSlider.oninput = () => { kelvin = parseInt(tempSlider.value, 10); updateColorUI(); };
-    resetTempBtn.onclick = () => { kelvin = 5500; tempSlider.value = "5500"; updateColorUI(); };
-    intensitySlider.oninput = () => { lutIntensity = parseInt(intensitySlider.value, 10) / 100; updateColorUI(); };
+    switchCamBtn.onclick = () => { facingMode = facingMode==="environment"?"user":"environment"; startCamera(); };
+    toggleAiBtn.onclick = async () => {
+      aiEnabled = !aiEnabled;
+      toggleAiBtn.classList.toggle("on", aiEnabled);
+      toggleAiBtn.textContent = aiEnabled ? "AI: Bật" : "AI: Tắt";
+      ratioSwitch.classList.toggle("show", aiEnabled);
+      if (aiEnabled) { await ensureAI(); startScanPhase(); scheduleNextAI(80); }
+      else { clearTimeout(aiTimerId); aiPhase="off"; lockedTrack=null; rescanBtn.classList.remove("show"); }
+    };
+    ratioBtns.forEach(b=>b.onclick=()=>{ ratioBtns.forEach(x=>x.classList.remove("active")); b.classList.add("active"); targetRatio=parseFloat(b.dataset.ratio); });
+    toggleColorBtn.onclick = () => { const op=colorDrawer.classList.toggle("open"); toggleColorBtn.classList.toggle("active-panel",op); };
+    tempSlider.oninput = () => { kelvin=parseInt(tempSlider.value,10); updateColorUI(); };
+    resetTempBtn.onclick = () => { kelvin=5500; tempSlider.value="5500"; updateColorUI(); };
+    intensitySlider.oninput = () => { lutIntensity=parseInt(intensitySlider.value,10)/100; updateColorUI(); };
     openSourceBtn.onclick = () => sourceModal.classList.add("open");
     closeSourceBtn.onclick = () => sourceModal.classList.remove("open");
     pickFileBtn.onclick = () => lutFileInput.click();
-    lutFileInput.onchange = async () => {
-      const f = lutFileInput.files?.[0]; lutFileInput.value = ""; if (!f) return;
-      try { if (f.size > 5 * 1024 * 1024) throw new Error("File vượt quá 5MB"); await addParsedLut(parseCubeFile(await f.text(), f.name)); }
-      catch (err) { showToast(err.message || "Không đọc được file LUT"); }
-    };
+    lutFileInput.onchange = async () => { const f=lutFileInput.files?.[0]; lutFileInput.value=""; if(!f)return; try{if(f.size>5e6)throw new Error("File > 5MB"); await addParsedLut(parseCubeFile(await f.text(),f.name));}catch(e){showToast(e.message);} };
     loadUrlBtn.onclick = async () => {
-      const url = lutUrlInput.value.trim(); if (!url.startsWith("https://")) { showToast("Chỉ cho phép link https:// an toàn"); return; }
-      loadUrlBtn.disabled = true; loadUrlBtn.textContent = "...";
-      try {
-        const ctrl = new AbortController(), t = setTimeout(() => ctrl.abort(), 10000);
-        const res = await fetch(url, { signal: ctrl.signal }); clearTimeout(t);
-        if (!res.ok) throw new Error("Không tải được file từ link");
-        await addParsedLut(parseCubeFile(await res.text(), url.split("/").pop()?.split("?")[0] || "Online LUT"));
-        lutUrlInput.value = "";
-      } catch (err) { showToast(err.name === "AbortError" ? "Quá thời gian tải" : (err.message || "Lỗi tải link")); }
-      finally { loadUrlBtn.disabled = false; loadUrlBtn.textContent = "Tải"; }
+      const u=lutUrlInput.value.trim(); if(!u.startsWith("https://")){showToast("Chỉ dùng link https://");return;}
+      loadUrlBtn.disabled=true; try{ const c=new AbortController(),t=setTimeout(()=>c.abort(),10000),res=await fetch(u,{signal:c.signal}); clearTimeout(t); if(!res.ok)throw new Error("Lỗi tải"); await addParsedLut(parseCubeFile(await res.text(),u.split("/").pop()?.split("?")[0]||"LUT")); lutUrlInput.value=""; }catch(e){showToast(e.message||"Lỗi tải");} finally{loadUrlBtn.disabled=false;}
     };
-    retakeBtn.onclick = () => { previewModal.classList.remove("open"); capturedDataUrl = null; capturedBlob = null; };
+    retakeBtn.onclick = () => { previewModal.classList.remove("open"); capturedDataUrl=null; capturedBlob=null; };
     downloadBtn.onclick = () => {
-      if (!capturedDataUrl) return;
-      const fn = `AI_Cam_${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}.jpg`;
-      if (window.AndroidBridge?.saveImage) { window.AndroidBridge.saveImage(capturedDataUrl, fn); return; }
-      const u = URL.createObjectURL(capturedBlob), a = document.createElement("a");
-      a.href = u; a.download = fn; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 1500);
+      if(!capturedDataUrl) return; const fn=`AI_Cam_${new Date().toISOString().replace(/[:.]/g,"-").slice(0,19)}.jpg`;
+      if(window.AndroidBridge?.saveImage){ window.AndroidBridge.saveImage(capturedDataUrl,fn); return; }
+      const u=URL.createObjectURL(capturedBlob),a=document.createElement("a"); a.href=u; a.download=fn; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(u),1500);
     };
     retryBtn.onclick = startCamera;
     window.handleBackAction = () => {
-      if (sourceModal.classList.contains("open")) { sourceModal.classList.remove("open"); return true; }
-      if (previewModal.classList.contains("open")) { previewModal.classList.remove("open"); capturedDataUrl = null; capturedBlob = null; return true; }
-      if (colorDrawer.classList.contains("open")) { colorDrawer.classList.remove("open"); toggleColorBtn.classList.remove("active-panel"); return true; }
+      if(sourceModal.classList.contains("open")){sourceModal.classList.remove("open");return true;}
+      if(previewModal.classList.contains("open")){previewModal.classList.remove("open");capturedDataUrl=null;capturedBlob=null;return true;}
+      if(colorDrawer.classList.contains("open")){colorDrawer.classList.remove("open");toggleColorBtn.classList.remove("active-panel");return true;}
       return false;
     };
 
     (async () => {
-      initWebGL();
-      lutList = [...createBuiltinLuts(), ...(await loadCustomLuts())];
-      renderLutStrip(); updateColorUI();
-      await startCamera();
-      setTimeout(initAI, 350);
+      initWebGL(); lutList = [...createBuiltinLuts(), ...(await loadCustomLuts())];
+      renderLutStrip(); updateColorUI(); await startCamera(); setTimeout(ensureAI, 1200);
     })();
   </script>
 </body>
