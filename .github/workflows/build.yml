@@ -4,7 +4,8 @@ on:
   push:
     branches: [ main, master ]
   workflow_dispatch:
-
+  permissions:
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -249,7 +250,14 @@ jobs:
         run: gradle assembleDebug --no-daemon
 
       - name: Upload APK
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: AI-Camera-OPPO-Reno11
           path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+      - name: Publish Release APK
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v3.${{ github.run_number }}" app/build/outputs/apk/debug/app-debug.apk --target "${{ github.sha }}" --title "AI Camera v3.${{ github.run_number }}" --notes "APK cho OPPO Reno 11"
