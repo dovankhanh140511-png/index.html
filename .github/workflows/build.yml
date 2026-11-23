@@ -1,0 +1,255 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '8.14'
+          cache-disabled: true
+
+      - name: Generate Android project
+        run: |
+          if [ ! -f index.html ]; then
+            echo "Thieu file index.html o thu muc goc!"
+            exit 1
+          fi
+
+          mkdir -p app/src/main/assets/mediapipe/wasm app/src/main/java/com/example/aicamera
+          cp index.html app/src/main/assets/index.html
+
+          npm install --no-save --prefix /tmp/mp @mediapipe/tasks-vision@0.10.21
+          cp /tmp/mp/node_modules/@mediapipe/tasks-vision/vision_bundle.mjs app/src/main/assets/mediapipe/
+          cp -r /tmp/mp/node_modules/@mediapipe/tasks-vision/wasm/* app/src/main/assets/mediapipe/wasm/
+          rm -rf /tmp/mp
+          curl -fsSL --retry 3 -o app/src/main/assets/mediapipe/efficientdet_lite0.tflite \
+            "https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/float16/1/efficientdet_lite0.tflite"
+
+          cat << 'EOF' > gradle.properties
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          android.useAndroidX=true
+          android.enableJetifier=false
+          EOF
+
+          cat << 'EOF' > settings.gradle.kts
+          pluginManagement {
+              repositories { google(); mavenCentral(); gradlePluginPortal() }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories { google(); mavenCentral() }
+          }
+          rootProject.name = "AICamera"
+          include(":app")
+          EOF
+
+          cat << 'EOF' > build.gradle.kts
+          plugins {
+              id("com.android.application") version "8.11.1" apply false
+              id("org.jetbrains.kotlin.android") version "2.2.20" apply false
+          }
+          EOF
+
+          cat << 'EOF' > app/build.gradle.kts
+          plugins {
+              id("com.android.application")
+              id("org.jetbrains.kotlin.android")
+          }
+          android {
+              namespace = "com.example.aicamera"
+              compileSdk = 36
+              defaultConfig {
+                  applicationId = "com.example.aicamera"
+                  minSdk = 24
+                  targetSdk = 36
+                  versionCode = 3
+                  versionName = "3.0"
+              }
+              androidResources { noCompress += listOf("tflite", "wasm") }
+              compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_17
+                  targetCompatibility = JavaVersion.VERSION_17
+              }
+              kotlinOptions { jvmTarget = "17" }
+          }
+          dependencies {
+              implementation("androidx.core:core-ktx:1.15.0")
+              implementation("androidx.appcompat:appcompat:1.7.0")
+              implementation("androidx.activity:activity-ktx:1.10.1")
+              implementation("androidx.webkit:webkit:1.12.1")
+          }
+          EOF
+
+          cat << 'EOF' > app/src/main/AndroidManifest.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.CAMERA" />
+              <uses-feature android:name="android.hardware.camera" android:required="false" />
+              <application android:allowBackup="true" android:hardwareAccelerated="true" android:label="AI Camera" android:theme="@style/Theme.AppCompat.NoActionBar">
+                  <activity android:name=".MainActivity" android:exported="true" android:screenOrientation="portrait">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+          cat << 'EOF' > app/src/main/java/com/example/aicamera/MainActivity.kt
+          package com.example.aicamera
+
+          import android.Manifest
+          import android.annotation.SuppressLint
+          import android.app.Activity
+          import android.content.ContentValues
+          import android.content.Intent
+          import android.content.pm.PackageManager
+          import android.graphics.Color
+          import android.net.Uri
+          import android.os.*
+          import android.provider.MediaStore
+          import android.util.Base64
+          import android.webkit.*
+          import android.widget.Toast
+          import androidx.activity.*
+          import androidx.activity.result.contract.ActivityResultContracts
+          import androidx.appcompat.app.AppCompatActivity
+          import androidx.core.content.ContextCompat
+          import androidx.webkit.WebViewAssetLoader
+
+          class MainActivity : AppCompatActivity() {
+              private lateinit var webView: WebView
+              private var pendingPermissionRequest: PermissionRequest? = null
+              private var filePathCallback: ValueCallback<Array<Uri>>? = null
+              private val appUrl = "https://appassets.androidplatform.net/assets/index.html"
+
+              private val cameraLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+                  if (granted) {
+                      val req = pendingPermissionRequest; pendingPermissionRequest = null
+                      if (req != null) req.grant(req.resources) else if (::webView.isInitialized) webView.loadUrl(appUrl)
+                  } else {
+                      pendingPermissionRequest?.deny(); pendingPermissionRequest = null
+                      Toast.makeText(this, "Vui lòng cấp quyền Camera để chụp ảnh", Toast.LENGTH_LONG).show()
+                      if (::webView.isInitialized && webView.url == null) webView.loadUrl(appUrl)
+                  }
+              }
+
+              private val fileChooserLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+                  val cb = filePathCallback; filePathCallback = null; if (cb == null) return@registerForActivityResult
+                  if (result.resultCode == Activity.RESULT_OK) {
+                      val uris = mutableListOf<Uri>()
+                      result.data?.data?.let { uris.add(it) }
+                      result.data?.clipData?.let { clip -> for (i in 0 until clip.itemCount) clip.getItemAt(i).uri?.let { uris.add(it) } }
+                      cb.onReceiveValue(if (uris.isNotEmpty()) uris.toTypedArray() else null)
+                  } else cb.onReceiveValue(null)
+              }
+
+              @SuppressLint("SetJavaScriptEnabled")
+              override fun onCreate(savedInstanceState: Bundle?) {
+                  super.onCreate(savedInstanceState)
+                  enableEdgeToEdge(SystemBarStyle.dark(Color.TRANSPARENT), SystemBarStyle.dark(Color.TRANSPARENT))
+                  webView = WebView(this).apply { setBackgroundColor(Color.BLACK) }
+                  setContentView(webView)
+                  val assetLoader = WebViewAssetLoader.Builder().addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this)).build()
+                  webView.settings.apply { javaScriptEnabled = true; domStorageEnabled = true; mediaPlaybackRequiresUserGesture = false; allowFileAccess = false }
+                  webView.addJavascriptInterface(AndroidBridge(), "AndroidBridge")
+
+                  webView.webViewClient = object : WebViewClient() {
+                      override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
+                          val res = assetLoader.shouldInterceptRequest(request.url) ?: return null
+                          val p = request.url.path ?: ""
+                          when {
+                              p.endsWith(".mjs") || p.endsWith(".js") -> res.mimeType = "application/javascript"
+                              p.endsWith(".wasm") -> res.mimeType = "application/wasm"
+                              p.endsWith(".tflite") -> res.mimeType = "application/octet-stream"
+                          }
+                          return res
+                      }
+                  }
+
+                  webView.webChromeClient = object : WebChromeClient() {
+                      override fun onPermissionRequest(request: PermissionRequest?) {
+                          if (request == null) return
+                          runOnUiThread {
+                              if (request.origin?.toString()?.startsWith("https://appassets.androidplatform.net") != true) { request.deny(); return@runOnUiThread }
+                              if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) request.grant(request.resources)
+                              else { pendingPermissionRequest = request; cameraLauncher.launch(Manifest.permission.CAMERA) }
+                          }
+                      }
+                      override fun onPermissionRequestCanceled(request: PermissionRequest?) { if (pendingPermissionRequest == request) pendingPermissionRequest = null }
+                      override fun onShowFileChooser(w: WebView?, cb: ValueCallback<Array<Uri>>?, p: FileChooserParams?): Boolean {
+                          filePathCallback?.onReceiveValue(null); filePathCallback = cb
+                          return try {
+                              fileChooserLauncher.launch(Intent.createChooser(Intent(Intent.ACTION_GET_CONTENT).apply { addCategory(Intent.CATEGORY_OPENABLE); type = "*/*" }, "Chọn file LUT (.cube)"))
+                              true
+                          } catch (e: Exception) { filePathCallback = null; false }
+                      }
+                  }
+
+                  onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+                      override fun handleOnBackPressed() {
+                          webView.evaluateJavascript("(function(){ if(window.handleBackAction && window.handleBackAction()) return 'handled'; return 'exit'; })()") { r ->
+                              if (r != "\"handled\"") { isEnabled = false; onBackPressedDispatcher.onBackPressed() }
+                          }
+                      }
+                  })
+
+                  if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) webView.loadUrl(appUrl)
+                  else cameraLauncher.launch(Manifest.permission.CAMERA)
+              }
+
+              override fun onPause() { super.onPause(); webView.onPause() }
+              override fun onResume() { super.onResume(); webView.onResume() }
+              override fun onDestroy() { filePathCallback?.onReceiveValue(null); filePathCallback = null; webView.destroy(); super.onDestroy() }
+
+              inner class AndroidBridge {
+                  @JavascriptInterface
+                  fun saveImage(base64DataUrl: String, fileName: String) {
+                      try {
+                          val bytes = Base64.decode(base64DataUrl.substringAfter("base64,"), Base64.DEFAULT)
+                          val values = ContentValues().apply {
+                              put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
+                              put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                              if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                  put(MediaStore.Images.Media.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/AICamera")
+                                  put(MediaStore.Images.Media.IS_PENDING, 1)
+                              }
+                          }
+                          val uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values) ?: throw IllegalStateException("MediaStore null")
+                          contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
+                          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) { values.clear(); values.put(MediaStore.Images.Media.IS_PENDING, 0); contentResolver.update(uri, values, null, null) }
+                          runOnUiThread { Toast.makeText(this@MainActivity, "Đã lưu ảnh vào Thư viện!", Toast.LENGTH_SHORT).show() }
+                      } catch (e: Exception) {
+                          runOnUiThread { Toast.makeText(this@MainActivity, "Lỗi lưu ảnh: ${e.message}", Toast.LENGTH_SHORT).show() }
+                      }
+                  }
+              }
+          }
+          EOF
+
+      - name: Build Debug APK
+        run: gradle assembleDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: AI-Camera-OPPO-Reno11
+          path: app/build/outputs/apk/debug/app-debug.apk
