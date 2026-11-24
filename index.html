@@ -460,7 +460,7 @@
       errorOverlay.classList.remove("show"); shutterBtn.disabled = true;
       if (currentStream) { currentStream.getTracks().forEach(t=>t.stop()); currentStream=null; videoTrack=null; }
       let stream=null, lastErr=null;
-      for (const c of [{audio:false,video:{facingMode:{ideal:facingMode},width:{ideal:2560},height:{ideal:1440},frameRate:{ideal:30,max:30}}},{audio:false,video:{facingMode:{ideal:facingMode},width:{ideal:1920},height:{ideal:1080}}},{audio:false,video:{facingMode:{ideal:facingMode}}}]) {
+      for (const c of [{audio:false,video:{facingMode:{ideal:facingMode},width:{ideal:1920},height:{ideal:1080},frameRate:{ideal:60,max:60}}},{audio:false,video:{facingMode:{ideal:facingMode},width:{ideal:1920},height:{ideal:1080}}},{audio:false,video:{facingMode:{ideal:facingMode}}}]) {
         try { stream = await navigator.mediaDevices.getUserMedia(c); break; } catch(e){ lastErr=e; }
       }
       if (!stream) { errorOverlay.classList.add("show"); errorDesc.textContent=lastErr?.name==="NotAllowedError"?"Bạn chưa cấp quyền Camera.":"Không mở được camera."; return; }
