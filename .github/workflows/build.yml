@@ -4,8 +4,10 @@ on:
   push:
     branches: [ main, master ]
   workflow_dispatch:
+
 permissions:
   contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -79,8 +81,8 @@ jobs:
                   applicationId = "com.example.aicamera"
                   minSdk = 24
                   targetSdk = 36
-                  versionCode = 3
-                  versionName = "3.0"
+                  versionCode = 4
+                  versionName = "4.0"
               }
               androidResources { noCompress += listOf("tflite", "wasm") }
               compileOptions {
@@ -103,7 +105,7 @@ jobs:
               <uses-permission android:name="android.permission.INTERNET" />
               <uses-permission android:name="android.permission.CAMERA" />
               <uses-feature android:name="android.hardware.camera" android:required="false" />
-              <application android:allowBackup="true" android:hardwareAccelerated="true" android:label="AI Camera của Hưng vua a6" android:theme="@style/Theme.AppCompat.NoActionBar">
+              <application android:allowBackup="true" android:hardwareAccelerated="true" android:largeHeap="true" android:label="Hưng Vua A6 AI Camera" android:theme="@style/Theme.AppCompat.NoActionBar">
                   <activity android:name=".MainActivity" android:exported="true" android:screenOrientation="portrait">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
@@ -128,6 +130,8 @@ jobs:
           import android.os.*
           import android.provider.MediaStore
           import android.util.Base64
+          import android.view.View
+          import android.view.WindowManager
           import android.webkit.*
           import android.widget.Toast
           import androidx.activity.*
@@ -135,11 +139,13 @@ jobs:
           import androidx.appcompat.app.AppCompatActivity
           import androidx.core.content.ContextCompat
           import androidx.webkit.WebViewAssetLoader
+          import java.util.concurrent.Executors
 
           class MainActivity : AppCompatActivity() {
               private lateinit var webView: WebView
               private var pendingPermissionRequest: PermissionRequest? = null
               private var filePathCallback: ValueCallback<Array<Uri>>? = null
+              private val ioExecutor = Executors.newSingleThreadExecutor()
               private val appUrl = "https://appassets.androidplatform.net/assets/index.html"
 
               private val cameraLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -166,11 +172,27 @@ jobs:
               @SuppressLint("SetJavaScriptEnabled")
               override fun onCreate(savedInstanceState: Bundle?) {
                   super.onCreate(savedInstanceState)
+                  window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                   enableEdgeToEdge(SystemBarStyle.dark(Color.TRANSPARENT), SystemBarStyle.dark(Color.TRANSPARENT))
-                  webView = WebView(this).apply { setBackgroundColor(Color.BLACK) }
+
+                  webView = WebView(this).apply {
+                      setBackgroundColor(Color.BLACK)
+                      setLayerType(View.LAYER_TYPE_HARDWARE, null)
+                      overScrollMode = View.OVER_SCROLL_NEVER
+                      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                          setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false)
+                      }
+                  }
                   setContentView(webView)
+
                   val assetLoader = WebViewAssetLoader.Builder().addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this)).build()
-                  webView.settings.apply { javaScriptEnabled = true; domStorageEnabled = true; mediaPlaybackRequiresUserGesture = false; allowFileAccess = false }
+                  webView.settings.apply {
+                      javaScriptEnabled = true
+                      domStorageEnabled = true
+                      mediaPlaybackRequiresUserGesture = false
+                      allowFileAccess = false
+                      cacheMode = WebSettings.LOAD_DEFAULT
+                  }
                   webView.addJavascriptInterface(AndroidBridge(), "AndroidBridge")
 
                   webView.webViewClient = object : WebViewClient() {
@@ -219,27 +241,33 @@ jobs:
 
               override fun onPause() { super.onPause(); webView.onPause() }
               override fun onResume() { super.onResume(); webView.onResume() }
-              override fun onDestroy() { filePathCallback?.onReceiveValue(null); filePathCallback = null; webView.destroy(); super.onDestroy() }
+              override fun onDestroy() {
+                  filePathCallback?.onReceiveValue(null); filePathCallback = null
+                  ioExecutor.shutdown()
+                  webView.destroy(); super.onDestroy()
+              }
 
               inner class AndroidBridge {
                   @JavascriptInterface
                   fun saveImage(base64DataUrl: String, fileName: String) {
-                      try {
-                          val bytes = Base64.decode(base64DataUrl.substringAfter("base64,"), Base64.DEFAULT)
-                          val values = ContentValues().apply {
-                              put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
-                              put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-                              if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                                  put(MediaStore.Images.Media.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/AICamera")
-                                  put(MediaStore.Images.Media.IS_PENDING, 1)
+                      ioExecutor.execute {
+                          try {
+                              val bytes = Base64.decode(base64DataUrl.substringAfter("base64,"), Base64.DEFAULT)
+                              val values = ContentValues().apply {
+                                  put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
+                                  put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                      put(MediaStore.Images.Media.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/AICamera")
+                                      put(MediaStore.Images.Media.IS_PENDING, 1)
+                                  }
                               }
+                              val uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values) ?: throw IllegalStateException("MediaStore null")
+                              contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
+                              if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) { values.clear(); values.put(MediaStore.Images.Media.IS_PENDING, 0); contentResolver.update(uri, values, null, null) }
+                              runOnUiThread { Toast.makeText(this@MainActivity, "Đã lưu ảnh vào Thư viện!", Toast.LENGTH_SHORT).show() }
+                          } catch (e: Exception) {
+                              runOnUiThread { Toast.makeText(this@MainActivity, "Lỗi lưu ảnh: ${e.message}", Toast.LENGTH_SHORT).show() }
                           }
-                          val uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values) ?: throw IllegalStateException("MediaStore null")
-                          contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
-                          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) { values.clear(); values.put(MediaStore.Images.Media.IS_PENDING, 0); contentResolver.update(uri, values, null, null) }
-                          runOnUiThread { Toast.makeText(this@MainActivity, "Đã lưu ảnh vào Thư viện!", Toast.LENGTH_SHORT).show() }
-                      } catch (e: Exception) {
-                          runOnUiThread { Toast.makeText(this@MainActivity, "Lỗi lưu ảnh: ${e.message}", Toast.LENGTH_SHORT).show() }
                       }
                   }
               }
@@ -260,4 +288,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "v3.${{ github.run_number }}" app/build/outputs/apk/debug/app-debug.apk --target "${{ github.sha }}" --title "AI Camera v3.${{ github.run_number }}" --notes "APK cho OPPO Reno 11"
+          gh release create "v4.${{ github.run_number }}" app/build/outputs/apk/debug/app-debug.apk --target "${{ github.sha }}" --title "Hưng Vua A6 AI Camera v4.${{ github.run_number }}" --notes "APK cho OPPO Reno 11"
