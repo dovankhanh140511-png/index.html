@@ -6,39 +6,38 @@
   <meta name="theme-color" content="#000000" />
   <title>Hưng Vua A6 AI Camera</title>
   <style>
-    :root { --bg:#000; --glass:rgba(18,18,22,.64); --panel:rgba(16,16,20,.92); --border:rgba(255,255,255,.15); --text:#fafafa; --muted:#a1a1aa; --green:#22c55e; --glow:rgba(34,197,94,.35); --amber:#fbbf24; --top:env(safe-area-inset-top,14px); --bot:env(safe-area-inset-bottom,18px); }
+    :root { --bg:#000; --glass:rgba(16,16,22,.76); --panel:rgba(16,16,22,.94); --border:rgba(255,255,255,.16); --text:#fafafa; --muted:#a1a1aa; --green:#22c55e; --glow:rgba(34,197,94,.35); --amber:#fbbf24; --top:env(safe-area-inset-top,14px); --bot:env(safe-area-inset-bottom,18px); }
     * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; }
     html,body { margin:0; padding:0; width:100%; height:100%; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; overflow:hidden; touch-action:none; }
     .app,.stage { position:relative; width:100%; height:100%; background:#050507; overflow:hidden; }
-    #cameraVideo,#glCanvas,#overlayCanvas { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
-    #cameraVideo { opacity:0; pointer-events:none; z-index:0; }
-    #cameraVideo.fallback { opacity:1; }
-    #glCanvas { z-index:1; pointer-events:none; }
+    #cameraVideo,#glCanvas,#overlayCanvas { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; will-change:opacity; }
+    #cameraVideo { z-index:0; pointer-events:none; opacity:1; }
+    #glCanvas { z-index:1; pointer-events:none; opacity:0; }
     #overlayCanvas { z-index:2; touch-action:none; }
     #cameraVideo.mirrored,#glCanvas.mirrored,#overlayCanvas.mirrored { transform:scaleX(-1); }
     .top-hud { position:absolute; top:0; left:0; right:0; z-index:10; padding:calc(var(--top) + 10px) 14px 20px; background:linear-gradient(to bottom,rgba(0,0,0,.78),rgba(0,0,0,.2) 70%,transparent); display:flex; flex-direction:column; gap:8px; pointer-events:none; }
     .top-row,.top-controls,.telemetry-bar { display:flex; align-items:center; justify-content:space-between; gap:6px; flex-wrap:wrap; pointer-events:auto; }
     .telemetry-bar { justify-content:flex-start; pointer-events:none; }
-    .status-pill { display:inline-flex; align-items:center; gap:7px; padding:7px 12px; border-radius:999px; background:var(--glass); backdrop-filter:blur(16px); border:1px solid var(--border); font-size:12px; font-weight:600; transition:.2s; }
-    .status-pill.good { background:rgba(20,83,45,.78); border-color:rgba(74,222,128,.7); color:#dcfce7; box-shadow:0 4px 18px var(--glow); }
+    .status-pill { display:inline-flex; align-items:center; gap:7px; padding:7px 12px; border-radius:999px; background:var(--glass); border:1px solid var(--border); font-size:12px; font-weight:600; transition:.18s; }
+    .status-pill.good { background:rgba(20,83,45,.86); border-color:rgba(74,222,128,.75); color:#dcfce7; box-shadow:0 4px 18px var(--glow); }
     .status-dot { width:7px; height:7px; border-radius:50%; background:var(--muted); flex-shrink:0; }
     .status-pill.ai-wait .status-dot { background:var(--amber); }
     .status-pill.good .status-dot { background:#4ade80; box-shadow:0 0 10px #4ade80; }
     .status-pill.loading .status-dot { background:#60a5fa; animation:pulse 1s infinite; }
     @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.35;transform:scale(.75)} }
-    .chip-btn { height:32px; padding:0 11px; border-radius:999px; border:1px solid var(--border); background:var(--glass); backdrop-filter:blur(16px); color:var(--muted); font-size:11.5px; font-weight:700; cursor:pointer; }
-    .chip-btn.on { border-color:rgba(74,222,128,.55); background:rgba(20,83,45,.55); color:#bbf7d0; }
-    .chip-btn.rescan { border-color:rgba(251,191,36,.6); background:rgba(120,53,15,.55); color:#fde68a; display:none; }
+    .chip-btn { height:32px; padding:0 11px; border-radius:999px; border:1px solid var(--border); background:var(--glass); color:var(--muted); font-size:11.5px; font-weight:700; cursor:pointer; }
+    .chip-btn.on { border-color:rgba(74,222,128,.55); background:rgba(20,83,45,.7); color:#bbf7d0; }
+    .chip-btn.rescan { border-color:rgba(251,191,36,.6); background:rgba(120,53,15,.72); color:#fde68a; display:none; }
     .chip-btn.rescan.show { display:inline-flex; align-items:center; }
-    .ratio-switch { display:none; padding:2px; border-radius:999px; background:var(--glass); backdrop-filter:blur(16px); border:1px solid var(--border); }
+    .ratio-switch { display:none; padding:2px; border-radius:999px; background:var(--glass); border:1px solid var(--border); }
     .ratio-switch.show { display:flex; }
-    .ratio-btn { border:none; background:transparent; color:rgba(255,255,255,.68); font-size:11px; font-weight:700; padding:5px 10px; border-radius:999px; cursor:pointer; }
+    .ratio-btn { border:none; background:transparent; color:rgba(255,255,255,.7); font-size:11px; font-weight:700; padding:5px 10px; border-radius:999px; cursor:pointer; }
     .ratio-btn.active { background:#fff; color:#09090b; }
-    .tele-chip { padding:3px 8px; border-radius:6px; background:rgba(0,0,0,.45); border:1px solid rgba(255,255,255,.08); font-size:10.5px; font-weight:600; color:rgba(255,255,255,.8); }
-    .zoom-bar { position:absolute; left:50%; transform:translateX(-50%); bottom:calc(var(--bot) + 106px); z-index:11; display:flex; align-items:center; gap:4px; padding:4px; border-radius:999px; background:var(--glass); backdrop-filter:blur(16px); border:1px solid var(--border); }
-    .zoom-pill { min-width:40px; height:30px; border-radius:999px; border:none; background:transparent; color:rgba(255,255,255,.78); font-size:11.5px; font-weight:700; cursor:pointer; transition:.15s; }
+    .tele-chip { padding:3px 8px; border-radius:6px; background:rgba(0,0,0,.55); border:1px solid rgba(255,255,255,.08); font-size:10.5px; font-weight:600; color:rgba(255,255,255,.82); }
+    .zoom-bar { position:absolute; left:50%; transform:translateX(-50%); bottom:calc(var(--bot) + 106px); z-index:11; display:flex; align-items:center; gap:4px; padding:4px; border-radius:999px; background:var(--glass); border:1px solid var(--border); }
+    .zoom-pill { min-width:40px; height:30px; border-radius:999px; border:none; background:transparent; color:rgba(255,255,255,.8); font-size:11.5px; font-weight:700; cursor:pointer; }
     .zoom-pill.active { background:#fbbf24; color:#09090b; }
-    .color-drawer { position:absolute; left:12px; right:12px; bottom:calc(var(--bot) + 152px); z-index:12; padding:14px; border-radius:20px; background:var(--panel); backdrop-filter:blur(22px); border:1px solid var(--border); box-shadow:0 18px 42px rgba(0,0,0,.68); display:none; flex-direction:column; gap:11px; }
+    .color-drawer { position:absolute; left:12px; right:12px; bottom:calc(var(--bot) + 152px); z-index:12; padding:14px; border-radius:20px; background:var(--panel); border:1px solid var(--border); box-shadow:0 18px 42px rgba(0,0,0,.7); display:none; flex-direction:column; gap:11px; }
     .color-drawer.open { display:flex; }
     .slider-row { display:flex; flex-direction:column; gap:5px; }
     .slider-head,.lut-header { display:flex; align-items:center; justify-content:space-between; font-size:12px; font-weight:600; }
@@ -48,7 +47,7 @@
     .range-temp { background:linear-gradient(90deg,#3b82f6 0%,#e4e4e7 50%,#f59e0b 100%); }
     .range-intensity { background:linear-gradient(90deg,#27272a 0%,#22c55e 100%); }
     .range-track::-webkit-slider-thumb { -webkit-appearance:none; width:22px; height:22px; border-radius:50%; background:#fff; border:2px solid #09090b; box-shadow:0 2px 8px rgba(0,0,0,.55); }
-    .add-lut-btn { border:1px solid rgba(74,222,128,.45); background:rgba(20,83,45,.45); color:#bbf7d0; font-size:11.5px; font-weight:700; padding:5px 11px; border-radius:999px; cursor:pointer; }
+    .add-lut-btn { border:1px solid rgba(74,222,128,.45); background:rgba(20,83,45,.55); color:#bbf7d0; font-size:11.5px; font-weight:700; padding:5px 11px; border-radius:999px; cursor:pointer; }
     .lut-strip { display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; }
     .lut-strip::-webkit-scrollbar { display:none; }
     .lut-card { position:relative; flex:0 0 auto; min-width:74px; padding:8px; border-radius:14px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1); color:#d4d4d8; font-size:11px; font-weight:600; display:flex; flex-direction:column; align-items:center; gap:5px; cursor:pointer; }
@@ -57,17 +56,17 @@
     .lut-name { max-width:70px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .lut-del { position:absolute; top:2px; right:3px; width:16px; height:16px; border-radius:50%; border:none; background:rgba(239,68,68,.9); color:#fff; font-size:10px; font-weight:800; line-height:16px; padding:0; }
     .bottom-dock { position:absolute; bottom:0; left:0; right:0; z-index:10; padding:20px 24px calc(var(--bot) + 16px); background:linear-gradient(to top,rgba(0,0,0,.92),rgba(0,0,0,.65) 60%,transparent); display:grid; grid-template-columns:1fr auto 1fr; align-items:center; }
-    .dock-btn { width:50px; height:50px; border-radius:50%; border:1px solid var(--border); background:var(--glass); backdrop-filter:blur(16px); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+    .dock-btn { width:50px; height:50px; border-radius:50%; border:1px solid var(--border); background:var(--glass); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; }
     .dock-btn.left { justify-self:start; }
     .dock-btn.right { justify-self:end; width:auto; padding:0 14px; border-radius:999px; gap:6px; font-size:12px; font-weight:700; }
-    .dock-btn.active-panel { border-color:#fde68a; background:rgba(245,158,11,.28); color:#fef3c7; }
+    .dock-btn.active-panel { border-color:#fde68a; background:rgba(245,158,11,.32); color:#fef3c7; }
     .shutter-btn { width:76px; height:76px; border-radius:50%; border:3.5px solid rgba(255,255,255,.92); background:rgba(255,255,255,.08); padding:5px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:.2s; }
     .shutter-core { width:100%; height:100%; border-radius:50%; background:#fff; transition:.14s; }
     .shutter-btn.ready { border-color:#4ade80; box-shadow:0 0 22px var(--glow); }
     .shutter-btn.ready .shutter-core { background:#22c55e; }
     .shutter-btn:active .shutter-core { transform:scale(.86); }
     .shutter-btn:disabled { opacity:.4; pointer-events:none; }
-    .modal-backdrop { position:fixed; inset:0; z-index:35; background:rgba(0,0,0,.72); backdrop-filter:blur(8px); display:none; align-items:flex-end; justify-content:center; padding:16px 14px calc(var(--bot) + 14px); }
+    .modal-backdrop { position:fixed; inset:0; z-index:35; background:rgba(0,0,0,.78); display:none; align-items:flex-end; justify-content:center; padding:16px 14px calc(var(--bot) + 14px); }
     .modal-backdrop.open { display:flex; }
     .source-sheet { width:100%; max-width:440px; border-radius:22px; background:#141418; border:1px solid var(--border); padding:18px; display:flex; flex-direction:column; gap:12px; }
     .source-title { display:flex; align-items:center; justify-content:space-between; font-size:16px; font-weight:700; }
@@ -89,10 +88,10 @@
     .btn-save { background:linear-gradient(135deg,#22c55e,#16a34a); color:#032210; border-color:#4ade80; }
     .error-sheet { position:absolute; inset:0; z-index:25; background:rgba(5,5,7,.94); display:none; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px; gap:14px; }
     .error-sheet.show { display:flex; }
-    .toast-pill { position:fixed; top:calc(var(--top) + 64px); left:50%; transform:translateX(-50%); z-index:50; background:rgba(24,24,29,.94); border:1px solid rgba(255,255,255,.18); color:#fff; font-size:12.5px; font-weight:600; padding:9px 16px; border-radius:999px; display:none; white-space:nowrap; }
+    .toast-pill { position:fixed; top:calc(var(--top) + 64px); left:50%; transform:translateX(-50%); z-index:50; background:rgba(24,24,29,.96); border:1px solid rgba(255,255,255,.18); color:#fff; font-size:12.5px; font-weight:600; padding:9px 16px; border-radius:999px; display:none; white-space:nowrap; }
     .toast-pill.show { display:block; }
-    .flash { position:fixed; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:40; transition:opacity .16s ease; }
-    .flash.active { opacity:.72; transition:none; }
+    .flash { position:fixed; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:40; transition:opacity .14s ease; }
+    .flash.active { opacity:.68; transition:none; }
   </style>
 </head>
 <body>
@@ -185,15 +184,14 @@
     const aiCanvas = document.createElement("canvas"), aiCtx = aiCanvas.getContext("2d");
     const IGNORE_BG = new Set(["chair","couch","bed","dining table","tv","refrigerator","toilet","sink","bench"]);
     let objectDetector = null, aiLoading = false, currentStream = null, videoTrack = null, camCaps = {};
-    let facingMode = "environment", targetRatio = 0.8, aiEnabled = false;
-    // Trạng thái AI: "off" | "scanning" | "guiding" | "ready"
+    let facingMode = "environment", targetRatio = 0.8, aiEnabled = false, isCapturing = false;
     let aiPhase = "off", scanStartTs = 0, scanSamples = [], lockedTrack = null, alignStartTs = 0, bestAnchor = { x: 0.36, y: 0.34 };
-    let rafId = null, aiTimerId = null, isInferring = false, lastInferTs = 0, smoothedCrop = null, focusRing = null;
-    let userZoom = 1.0, activeZoom = 1.0, hwZoom = 1.0, lastHwApply = 0, camCX = 0, camCY = 0, camReady = false;
-    let capturedDataUrl = null, capturedBlob = null, kelvin = 5500, lutIntensity = 0.85, activeLutId = "none", lutList = [];
+    let rafId = null, aiTimerId = null, isInferring = false, lastInferTs = 0, lastGlTime = -1, smoothedCrop = null, focusRing = null;
+    let userZoom = 1.0, activeZoom = 1.0, hwZoom = 1.0, lastHwApply = 0, camCX = 0, camCY = 0, camReady = false, glVisible = false;
+    let capturedDataUrl = null, lastCanvas = null, kelvin = 5500, lutIntensity = 0.85, activeLutId = "none", lutList = [];
 
     const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-    const showToast = (msg) => { toastEl.textContent = msg; toastEl.classList.add("show"); clearTimeout(showToast._t); showToast._t = setTimeout(() => toastEl.classList.remove("show"), 2300); };
+    const showToast = (msg) => { toastEl.textContent = msg; toastEl.classList.add("show"); clearTimeout(showToast._t); showToast._t = setTimeout(() => toastEl.classList.remove("show"), 2200); };
 
     function getTempGains(k) {
       const t = clamp((k - 5500) / 3000, -1, 1);
@@ -263,7 +261,7 @@
     let gl=null, glProg=null, vTex=null, lTex=null, glLoc={}, useWebGL=false;
     function initWebGL() {
       try {
-        gl=glCanvas.getContext("webgl",{alpha:false,antialias:false,preserveDrawingBuffer:false}); if(!gl) throw 0;
+        gl=glCanvas.getContext("webgl",{alpha:false,antialias:false,preserveDrawingBuffer:false,powerPreference:"high-performance"}); if(!gl) throw 0;
         const vs="attribute vec2 aPos; varying vec2 vUv; void main(){ vUv=vec2(aPos.x*.5+.5,.5-aPos.y*.5); gl_Position=vec4(aPos,0.,1.); }";
         const fs=`precision mediump float; varying vec2 vUv; uniform sampler2D uVideo,uLut; uniform vec2 uCenter,uScale; uniform vec3 uGains; uniform float uN,uInt,uUse;
           vec3 sLut(vec3 c,float n){ float bs=clamp(c.b,0.,1.)*(n-1.),b0=floor(bs),b1=min(n-1.,b0+1.),ub=.5+clamp(c.r,0.,1.)*(n-1.),v=(.5+clamp(c.g,0.,1.)*(n-1.))/n;
@@ -276,7 +274,7 @@
         const mkT=()=>{const t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);return t;};
         vTex=mkT(); lTex=mkT(); ["uVideo","uLut","uCenter","uScale","uGains","uN","uInt","uUse"].forEach(k=>glLoc[k]=gl.getUniformLocation(glProg,k));
         gl.uniform1i(glLoc.uVideo,0); gl.uniform1i(glLoc.uLut,1); useWebGL=true;
-      } catch { useWebGL=false; video.classList.add("fallback"); }
+      } catch { useWebGL=false; }
     }
     function uploadLutGL(lut) {
       if (!useWebGL || !lut?.data) return;
@@ -285,13 +283,21 @@
       gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D,lTex); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
       gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,N*N,N,0,gl.RGBA,gl.UNSIGNED_BYTE,atlas);
     }
+    function setGlMode(on) {
+      if (glVisible === on) return;
+      glVisible = on;
+      glCanvas.style.opacity = on ? "1" : "0";
+      video.style.opacity = on ? "0" : "1";
+    }
     function renderGL(viewW, viewH, vidW, vidH, totalScale) {
       if (!useWebGL) return;
-      const dpr=Math.min(window.devicePixelRatio||1,2), tw=Math.round(viewW*dpr), th=Math.round(viewH*dpr);
-      if (glCanvas.width!==tw || glCanvas.height!==th) { glCanvas.width=tw; glCanvas.height=th; }
-      gl.viewport(0,0,tw,th);
-      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D,vTex); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
-      gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,video);
+      if (glCanvas.width!==viewW || glCanvas.height!==viewH) { glCanvas.width=viewW; glCanvas.height=viewH; }
+      gl.viewport(0,0,viewW,viewH);
+      if (video.currentTime !== lastGlTime) {
+        lastGlTime = video.currentTime;
+        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D,vTex); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
+        gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,video);
+      }
       const lut=getActiveLut(), gains=getTempGains(kelvin);
       gl.uniform2f(glLoc.uCenter, camCX/vidW, camCY/vidH); gl.uniform2f(glLoc.uScale, viewW/(vidW*totalScale), viewH/(vidH*totalScale));
       gl.uniform3f(glLoc.uGains, gains[0], gains[1], gains[2]); gl.uniform1f(glLoc.uN, lut?.size||2); gl.uniform1f(glLoc.uInt, lutIntensity); gl.uniform1f(glLoc.uUse, lut?.data?1:0);
@@ -331,7 +337,8 @@
       if (!hasLut) { for(let i=0;i<px.length;i+=4){px[i]*=rg;px[i+1]*=gg;px[i+2]*=bg;} c2d.putImageData(img,0,0); return; }
       const N=lut.size, n1=N-1, ld=lut.data, inv=1/255, im=1-intensity, rs=N*4, ss=N*N*4;
       for (let i=0;i<px.length;i+=4) {
-        const sr=Math.min(255,px[i]*rg), sg=Math.min(255,px[i+1]*gg), sb=Math.min(255,px[i+2]*bg);
+        let sr=px[i]*rg, sg=px[i+1]*gg, sb=px[i+2]*bg;
+        if(sr>255)sr=255; if(sg>255)sg=255; if(sb>255)sb=255;
         const rx=sr*inv*n1, gy=sg*inv*n1, bz=sb*inv*n1;
         const x0=rx|0,x1=x0<n1?x0+1:n1,fx=rx-x0, y0=gy|0,y1=y0<n1?y0+1:n1,fy=gy-y0, z0=bz|0,z1=z0<n1?z0+1:n1,fz=bz-z0;
         const i000=x0*4+y0*rs+z0*ss,i100=x1*4+y0*rs+z0*ss,i010=x0*4+y1*rs+z0*ss,i110=x1*4+y1*rs+z0*ss;
@@ -368,39 +375,28 @@
       lockedTrack = null; alignStartTs = 0; smoothedCrop = null;
       rescanBtn.classList.add("show");
     }
-
-    const scheduleNextAI = (ms=110) => { clearTimeout(aiTimerId); if (aiEnabled) aiTimerId = setTimeout(runAiStep, ms); };
+    const scheduleNextAI = (ms=160) => { clearTimeout(aiTimerId); if (aiEnabled) aiTimerId = setTimeout(runAiStep, ms); };
 
     function processAIScanOrTrack(dets, vidW, vidH) {
       const now = performance.now();
       if (aiPhase === "scanning") {
-        // Gom mẫu ổn định trong ~1.2 giây để chọn chủ thể & góc bố cục 1/3 đẹp nhất
         for (const d of dets) {
           const b = d.boundingBox, c = d.categories?.[0]; if (!c || IGNORE_BG.has(c.categoryName)) continue;
           const cx = b.originX + b.width/2, cy = b.originY + b.height/2;
-          const centerBonus = 1.25 - Math.hypot(cx/vidW - 0.5, cy/vidH - 0.5) * 0.5;
-          const sc = c.score * (c.categoryName==="person" ? 1.6 : 1.0) * centerBonus;
+          const sc = c.score * (c.categoryName==="person" ? 1.6 : 1.0) * (1.25 - Math.hypot(cx/vidW - 0.5, cy/vidH - 0.5) * 0.5);
           scanSamples.push({ x:b.originX, y:b.originY, w:b.width, h:b.height, cx, cy, cat:c.categoryName, score:sc });
         }
         if (now - scanStartTs >= 1200 && scanSamples.length > 0) {
-          // Chọn mẫu điểm cao nhất và trung bình hóa các mẫu gần nó
           scanSamples.sort((a,b) => b.score - a.score);
-          const top = scanSamples[0];
-          const cluster = scanSamples.filter(s => s.cat === top.cat && Math.hypot(s.cx-top.cx, s.cy-top.cy) < vidW*0.2);
+          const top = scanSamples[0], cluster = scanSamples.filter(s => s.cat === top.cat && Math.hypot(s.cx-top.cx, s.cy-top.cy) < vidW*0.2);
           const avg = (k) => cluster.reduce((sum, s) => sum + s[k], 0) / cluster.length;
           const ax = avg("x"), ay = avg("y"), aw = avg("w"), ah = avg("h");
           lockedTrack = { x:ax, y:ay, w:aw, h:ah, cat:top.cat, missed:0 };
-          // Chọn góc đẹp nhất theo quy tắc 1/3 (bên nào còn nhiều không gian thì đặt chủ thể sang bên còn lại)
-          const fx = ax + aw/2;
-          bestAnchor = {
-            x: aw > vidW*0.5 ? 0.5 : (fx < vidW*0.5 ? 0.36 : 0.64),
-            y: top.cat === "person" ? 0.34 : 0.43
-          };
+          bestAnchor = { x: aw > vidW*0.5 ? 0.5 : (ax+aw/2 < vidW*0.5 ? 0.36 : 0.64), y: top.cat === "person" ? 0.34 : 0.43 };
           aiPhase = "guiding"; alignStartTs = 0;
         }
         return;
       }
-
       if (!lockedTrack) return;
       const lcx = lockedTrack.x + lockedTrack.w/2, lcy = lockedTrack.y + lockedTrack.h/2;
       let best = null, bestDist = Infinity;
@@ -411,23 +407,22 @@
         if (dist < Math.max(lockedTrack.w,lockedTrack.h)*0.95 + vidW*0.14 && dist < bestDist) { bestDist=dist; best=d; }
       }
       if (best) {
-        const b=best.boundingBox;
-        const alpha = Math.hypot((b.originX+b.width/2)-lcx, (b.originY+b.height/2)-lcy) > vidW*0.025 ? 0.25 : 0.08;
+        const b=best.boundingBox, alpha = Math.hypot((b.originX+b.width/2)-lcx, (b.originY+b.height/2)-lcy) > vidW*0.025 ? 0.25 : 0.08;
         lockedTrack.x += (b.originX-lockedTrack.x)*alpha; lockedTrack.y += (b.originY-lockedTrack.y)*alpha;
         lockedTrack.w += (b.width-lockedTrack.w)*alpha; lockedTrack.h += (b.height-lockedTrack.h)*alpha;
         lockedTrack.missed = 0;
       } else {
         lockedTrack.missed++;
-        if (lockedTrack.missed > 16) startScanPhase(); // Mất dấu hoàn toàn > 1.8s -> quét lại
+        if (lockedTrack.missed > 14) startScanPhase();
       }
     }
 
     function runAiStep() {
       if (!aiEnabled) return;
-      if (!objectDetector || !video.videoWidth || !video.videoHeight || video.paused || isInferring) { scheduleNextAI(130); return; }
+      if (isCapturing || !objectDetector || !video.videoWidth || !video.videoHeight || video.paused || isInferring) { scheduleNextAI(180); return; }
       isInferring = true; const t0 = performance.now();
       try {
-        const vidW=video.videoWidth, vidH=video.videoHeight, aiW=320, aiH=Math.max(180,Math.round((vidH/vidW)*aiW));
+        const vidW=video.videoWidth, vidH=video.videoHeight, aiW=224, aiH=Math.max(126,Math.round((vidH/vidW)*aiW));
         if (aiCanvas.width!==aiW || aiCanvas.height!==aiH) { aiCanvas.width=aiW; aiCanvas.height=aiH; }
         aiCtx.drawImage(video,0,0,aiW,aiH);
         const ts=Math.max(lastInferTs+1,Math.round(performance.now())); lastInferTs=ts;
@@ -435,7 +430,7 @@
         const dets=(res?.detections||[]).map(d=>({ categories:d.categories, boundingBox:{ originX:d.boundingBox.originX*sx, originY:d.boundingBox.originY*sy, width:d.boundingBox.width*sx, height:d.boundingBox.height*sy } }));
         processAIScanOrTrack(dets, vidW, vidH);
       } catch {} finally { isInferring = false; }
-      scheduleNextAI(Math.max(90, Math.min(200, (performance.now()-t0)+55)));
+      scheduleNextAI(Math.max(150, Math.min(280, (performance.now()-t0)+95)));
     }
 
     async function applyHardwareFocus(xNorm, yNorm) {
@@ -450,7 +445,7 @@
     function applyHardwareZoom(targetZ) {
       if (!videoTrack || !camCaps.zoom) { hwZoom=1.0; return; }
       const desiredHw = clamp(targetZ, camCaps.zoom.min||1, camCaps.zoom.max||1), now=performance.now();
-      if (Math.abs(desiredHw - hwZoom) >= 0.05 && now - lastHwApply > 110) {
+      if (Math.abs(desiredHw - hwZoom) >= 0.05 && now - lastHwApply > 120) {
         hwZoom = desiredHw; lastHwApply = now;
         videoTrack.applyConstraints({ advanced: [{ zoom: hwZoom }] }).catch(()=>{});
       }
@@ -460,7 +455,11 @@
       errorOverlay.classList.remove("show"); shutterBtn.disabled = true;
       if (currentStream) { currentStream.getTracks().forEach(t=>t.stop()); currentStream=null; videoTrack=null; }
       let stream=null, lastErr=null;
-      for (const c of [{audio:false,video:{facingMode:{ideal:facingMode},width:{ideal:1920},height:{ideal:1080},frameRate:{ideal:60,max:60}}},{audio:false,video:{facingMode:{ideal:facingMode},width:{ideal:1920},height:{ideal:1080}}},{audio:false,video:{facingMode:{ideal:facingMode}}}]) {
+      for (const c of [
+        {audio:false,video:{facingMode:{ideal:facingMode},width:{ideal:1920,max:1920},height:{ideal:1080,max:1080},frameRate:{ideal:60,max:60}}},
+        {audio:false,video:{facingMode:{ideal:facingMode},width:{ideal:1920,max:1920},height:{ideal:1080,max:1080}}},
+        {audio:false,video:{facingMode:{ideal:facingMode}}}
+      ]) {
         try { stream = await navigator.mediaDevices.getUserMedia(c); break; } catch(e){ lastErr=e; }
       }
       if (!stream) { errorOverlay.classList.add("show"); errorDesc.textContent=lastErr?.name==="NotAllowedError"?"Bạn chưa cấp quyền Camera.":"Không mở được camera."; return; }
@@ -472,11 +471,11 @@
       if (video.readyState < 1) await new Promise(r=>{ const t=setTimeout(r,1500); video.addEventListener("loadedmetadata",()=>{clearTimeout(t);r();},{once:true}); });
       try { await video.play(); } catch {}
       applyHardwareFocus();
-      smoothedCrop=null; lockedTrack=null; camReady=false; userZoom=1.0; activeZoom=1.0; hwZoom=1.0;
+      smoothedCrop=null; lockedTrack=null; camReady=false; userZoom=1.0; activeZoom=1.0; hwZoom=1.0; lastGlTime=-1; setGlMode(false);
       if (aiEnabled) startScanPhase();
       zoomPills.forEach(p=>p.classList.toggle("active",p.dataset.z==="1"));
       shutterBtn.disabled=false;
-      metaInfo.textContent = `${isFront?"CAM TRƯỚC":"CAM SAU"} • ${video.videoWidth?`${video.videoWidth}×${video.videoHeight}`:"HD"}`;
+      metaInfo.textContent = `${isFront?"CAM TRƯỚC":"CAM SAU"} • ${video.videoWidth?`${video.videoWidth}×${video.videoHeight}`:"FHD"}`;
       if (!rafId) rafId = requestAnimationFrame(renderLoop);
     }
 
@@ -489,11 +488,7 @@
       if (cw>vidW) { cw=vidW; ch=cw/ratio; }
       if (ch>vidH) { ch=vidH; cw=ch*ratio; }
       const scx=track.x+track.w/2, sfy=isP?track.y+track.h*.28:track.y+track.h/2;
-      return {
-        x: clamp(scx - cw*bestAnchor.x, 0, vidW - cw),
-        y: clamp(sfy - ch*bestAnchor.y, 0, vidH - ch),
-        w: cw, h: ch
-      };
+      return { x:clamp(scx-cw*bestAnchor.x,0,vidW-cw), y:clamp(sfy-ch*bestAnchor.y,0,vidH-ch), w:cw, h:ch };
     }
 
     function drawOverlay(viewW, viewH, vidW, vidH, totalScale, crop, track, guidePt, subjPt) {
@@ -502,22 +497,18 @@
 
       if (aiEnabled) {
         if (aiPhase === "scanning") {
-          // Vòng quét tĩnh ở giữa màn hình
           const p = clamp((performance.now() - scanStartTs) / 1200, 0, 1);
           ctx.save(); ctx.strokeStyle="rgba(255,255,255,.25)"; ctx.lineWidth=3;
           ctx.beginPath(); ctx.arc(viewW/2, viewH/2, 42, 0, Math.PI*2); ctx.stroke();
           ctx.strokeStyle="#60a5fa"; ctx.beginPath(); ctx.arc(viewW/2, viewH/2, 42, -Math.PI/2, -Math.PI/2 + Math.PI*2*p); ctx.stroke();
           ctx.restore();
         } else if (track) {
-          // Khung bố cục 1/3 đẹp nhất
           let sx, sy, sw, sh;
           if (aiPhase === "guiding") {
-            sh = Math.min(viewH*0.68, (viewW*0.84)/targetRatio); sw = sh*targetRatio;
-            sx = (viewW - sw)/2; sy = (viewH - sh)/2;
+            sh = Math.min(viewH*0.68, (viewW*0.84)/targetRatio); sw = sh*targetRatio; sx = (viewW-sw)/2; sy = (viewH-sh)/2;
           } else {
             sx = toX(crop.x); sy = toY(crop.y); sw = crop.w*totalScale; sh = crop.h*totalScale;
           }
-
           ctx.save(); ctx.fillStyle="rgba(0,0,0,.44)"; ctx.beginPath(); ctx.rect(0,0,viewW,viewH); ctx.rect(sx,sy,sw,sh); ctx.fill("evenodd"); ctx.restore();
           ctx.save(); ctx.strokeStyle=aiPhase==="ready"?"rgba(134,239,172,.45)":"rgba(255,255,255,.22)"; ctx.lineWidth=1;
           for(let i=1;i<=2;i++){ctx.beginPath();ctx.moveTo(sx+sw*i/3,sy);ctx.lineTo(sx+sw*i/3,sy+sh);ctx.stroke();ctx.beginPath();ctx.moveTo(sx,sy+sh*i/3);ctx.lineTo(sx+sw,sy+sh*i/3);ctx.stroke();}
@@ -529,16 +520,12 @@
           ctx.stroke(); ctx.restore();
 
           if (aiPhase === "guiding" && guidePt && subjPt) {
-            // Vẽ vòng tròn đích + chấm chủ thể + mũi tên hướng dẫn lia cam
-            ctx.save();
-            ctx.strokeStyle="#fbbf24"; ctx.lineWidth=2.5; ctx.setLineDash([5,4]);
+            ctx.save(); ctx.strokeStyle="#fbbf24"; ctx.lineWidth=2.5; ctx.setLineDash([5,4]);
             ctx.beginPath(); ctx.arc(guidePt.x, guidePt.y, 24, 0, Math.PI*2); ctx.stroke();
-            ctx.setLineDash([]);
-            ctx.strokeStyle="rgba(251,191,36,.85)"; ctx.lineWidth=2;
+            ctx.setLineDash([]); ctx.strokeStyle="rgba(251,191,36,.85)"; ctx.lineWidth=2;
             ctx.beginPath(); ctx.moveTo(subjPt.x, subjPt.y); ctx.lineTo(guidePt.x, guidePt.y); ctx.stroke();
-            ctx.fillStyle="#ffffff"; ctx.beginPath(); ctx.arc(subjPt.x, subjPt.y, 7, 0, Math.PI*2); ctx.fill();
-            ctx.strokeStyle="#fbbf24"; ctx.lineWidth=2; ctx.stroke();
-            ctx.restore();
+            ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(subjPt.x, subjPt.y, 7, 0, Math.PI*2); ctx.fill();
+            ctx.strokeStyle="#fbbf24"; ctx.lineWidth=2; ctx.stroke(); ctx.restore();
           } else if (aiPhase === "ready" && subjPt) {
             ctx.save(); ctx.strokeStyle="#4ade80"; ctx.lineWidth=2.5;
             ctx.beginPath(); ctx.arc(subjPt.x, subjPt.y, 18, 0, Math.PI*2); ctx.stroke();
@@ -551,17 +538,15 @@
       if (focusRing && performance.now() - focusRing.t < 900) {
         const age = (performance.now() - focusRing.t) / 900;
         ctx.save(); ctx.globalAlpha = 1 - age*0.6; ctx.strokeStyle = "#fbbf24"; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(focusRing.x, focusRing.y, 26 - age*6, 0, Math.PI*2); ctx.stroke();
-        ctx.restore();
+        ctx.beginPath(); ctx.arc(focusRing.x, focusRing.y, 26 - age*6, 0, Math.PI*2); ctx.stroke(); ctx.restore();
       }
     }
 
     function renderLoop() {
       rafId = requestAnimationFrame(renderLoop);
-      if (!video.videoWidth || !video.videoHeight || video.paused) return;
-      const dpr=Math.min(window.devicePixelRatio||1,2), viewW=stage.clientWidth, viewH=stage.clientHeight;
-      if (overlayCanvas.width!==Math.round(viewW*dpr)||overlayCanvas.height!==Math.round(viewH*dpr)) { overlayCanvas.width=Math.round(viewW*dpr); overlayCanvas.height=Math.round(viewH*dpr); }
-      ctx.setTransform(dpr,0,0,dpr,0,0);
+      if (isCapturing || !video.videoWidth || !video.videoHeight || video.paused) return;
+      const viewW=stage.clientWidth, viewH=stage.clientHeight;
+      if (overlayCanvas.width!==viewW || overlayCanvas.height!==viewH) { overlayCanvas.width=viewW; overlayCanvas.height=viewH; }
 
       const vidW=video.videoWidth, vidH=video.videoHeight, baseScale=Math.max(viewW/vidW, viewH/vidH);
       if (!camReady) { camCX=vidW/2; camCY=vidH/2; camReady=true; }
@@ -578,7 +563,7 @@
         targetCX = smoothedCrop.x + smoothedCrop.w/2; targetCY = smoothedCrop.y + smoothedCrop.h/2;
       }
 
-      activeZoom += (desiredZoom - activeZoom) * 0.12;
+      activeZoom += (desiredZoom - activeZoom) * 0.14;
       applyHardwareZoom(activeZoom);
       const digitalZoom = Math.max(1.0, activeZoom / Math.max(1.0, hwZoom));
       const totalScale = baseScale * digitalZoom;
@@ -587,7 +572,11 @@
       camCY = clamp(camCY + (targetCY - camCY)*0.12, halfH, vidH - halfH);
       zoomInfo.textContent = `${activeZoom.toFixed(1)}×`;
 
-      renderGL(viewW, viewH, vidW, vidH, totalScale);
+      // Zero-Copy: Chỉ bật WebGL khi có LUT, đổi Kelvin, Zoom số hoặc Pan lệch tâm
+      const lut = getActiveLut();
+      const needGL = useWebGL && (Boolean(lut?.data) || kelvin !== 5500 || digitalZoom > 1.02 || Math.abs(camCX - vidW/2) > 3 || Math.abs(camCY - vidH/2) > 3);
+      setGlMode(needGL);
+      if (needGL) renderGL(viewW, viewH, vidW, vidH, totalScale);
 
       let guidePt = null, subjPt = null;
       if (aiEnabled && activeTrack) {
@@ -598,20 +587,17 @@
         guidePt = { x: (viewW-sw)/2 + sw*bestAnchor.x, y: (viewH-sh)/2 + sh*bestAnchor.y };
 
         if (aiPhase === "guiding") {
-          const dist = Math.hypot(subjPt.x - guidePt.x, subjPt.y - guidePt.y);
-          if (dist < 44) {
+          if (Math.hypot(subjPt.x - guidePt.x, subjPt.y - guidePt.y) < 44) {
             if (!alignStartTs) alignStartTs = performance.now();
-            if (performance.now() - alignStartTs > 320) aiPhase = "ready";
-          } else {
-            alignStartTs = 0;
-          }
+            if (performance.now() - alignStartTs > 300) aiPhase = "ready";
+          } else alignStartTs = 0;
         }
       }
 
       if (!aiEnabled) setStatus("idle", "Chụp thường");
       else if (!objectDetector) setStatus("loading", "Đang nạp AI...");
-      else if (aiPhase === "scanning") setStatus("loading", "Giữ yên máy • Đang quét góc đẹp...");
-      else if (aiPhase === "guiding") setStatus("ai-wait", "Lia chấm trắng vào vòng tròn vàng");
+      else if (aiPhase === "scanning") setStatus("loading", "Giữ yên máy • Đang quét...");
+      else if (aiPhase === "guiding") setStatus("ai-wait", "Lia chấm vào vòng tròn vàng");
       else if (aiPhase === "ready") setStatus("good", "Bố cục chuẩn • Bấm chụp!");
 
       drawOverlay(viewW, viewH, vidW, vidH, totalScale, smoothedCrop, activeTrack, guidePt, subjPt);
@@ -641,9 +627,10 @@
     zoomPills.forEach(p => p.onclick = () => { userZoom = parseFloat(p.dataset.z); zoomPills.forEach(x => x.classList.remove("active")); p.classList.add("active"); });
     rescanBtn.onclick = startScanPhase;
 
-    async function captureFullRes() {
-      if (!video.videoWidth) return;
-      flashEl.classList.add("active"); setTimeout(()=>flashEl.classList.remove("active"),130);
+    function captureFullRes() {
+      if (!video.videoWidth || isCapturing) return;
+      isCapturing = true;
+      flashEl.classList.add("active"); setTimeout(()=>flashEl.classList.remove("active"),120);
       const vidW=video.videoWidth, vidH=video.videoHeight, viewW=stage.clientWidth, viewH=stage.clientHeight;
       const digitalZoom = Math.max(1.0, activeZoom / Math.max(1.0, hwZoom));
       const totalScale = Math.max(viewW/vidW, viewH/vidH) * digitalZoom;
@@ -659,8 +646,10 @@
       const oc=out.getContext("2d"); if(facingMode==="user"){oc.translate(sw,0);oc.scale(-1,1);}
       oc.drawImage(video,sx,sy,sw,sh,0,0,sw,sh);
       const lut=getActiveLut(); applyColorToCanvas(out,lut,lutIntensity,kelvin);
-      capturedDataUrl=out.toDataURL("image/jpeg",0.95); capturedBlob=await new Promise(r=>out.toBlob(r,"image/jpeg",0.95));
+      lastCanvas = out;
+      capturedDataUrl = out.toDataURL("image/jpeg", 0.92);
       previewImg.src=capturedDataUrl; previewRes.textContent=`${sw} × ${sh} px`; previewSub.textContent=`${lut?.name||"Gốc"} • ${kelvin}K • ${activeZoom.toFixed(1)}×`; previewModal.classList.add("open");
+      isCapturing = false;
     }
 
     shutterBtn.onclick = captureFullRes;
@@ -686,16 +675,17 @@
       const u=lutUrlInput.value.trim(); if(!u.startsWith("https://")){showToast("Chỉ dùng link https://");return;}
       loadUrlBtn.disabled=true; try{ const c=new AbortController(),t=setTimeout(()=>c.abort(),10000),res=await fetch(u,{signal:c.signal}); clearTimeout(t); if(!res.ok)throw new Error("Lỗi tải"); await addParsedLut(parseCubeFile(await res.text(),u.split("/").pop()?.split("?")[0]||"LUT")); lutUrlInput.value=""; }catch(e){showToast(e.message||"Lỗi tải");} finally{loadUrlBtn.disabled=false;}
     };
-    retakeBtn.onclick = () => { previewModal.classList.remove("open"); capturedDataUrl=null; capturedBlob=null; };
-    downloadBtn.onclick = () => {
+    retakeBtn.onclick = () => { previewModal.classList.remove("open"); capturedDataUrl=null; lastCanvas=null; };
+    downloadBtn.onclick = async () => {
       if(!capturedDataUrl) return; const fn=`AI_Cam_${new Date().toISOString().replace(/[:.]/g,"-").slice(0,19)}.jpg`;
       if(window.AndroidBridge?.saveImage){ window.AndroidBridge.saveImage(capturedDataUrl,fn); return; }
-      const u=URL.createObjectURL(capturedBlob),a=document.createElement("a"); a.href=u; a.download=fn; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(u),1500);
+      const blob = lastCanvas ? await new Promise(r=>lastCanvas.toBlob(r,"image/jpeg",0.92)) : null;
+      if(!blob) return; const u=URL.createObjectURL(blob),a=document.createElement("a"); a.href=u; a.download=fn; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(u),1500);
     };
     retryBtn.onclick = startCamera;
     window.handleBackAction = () => {
       if(sourceModal.classList.contains("open")){sourceModal.classList.remove("open");return true;}
-      if(previewModal.classList.contains("open")){previewModal.classList.remove("open");capturedDataUrl=null;capturedBlob=null;return true;}
+      if(previewModal.classList.contains("open")){previewModal.classList.remove("open");capturedDataUrl=null;lastCanvas=null;return true;}
       if(colorDrawer.classList.contains("open")){colorDrawer.classList.remove("open");toggleColorBtn.classList.remove("active-panel");return true;}
       return false;
     };
